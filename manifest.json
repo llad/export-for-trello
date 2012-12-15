@@ -1,0 +1,14 @@
+{
+	"name": "TrelloExport",
+	"version": "0.1",
+	"description": "Export Trello Boards",
+	"content_scripts": [
+		{
+			"matches": ["https://trello.com/*"],
+			"js": ["jquery-1.8.3.min.js","trelloexport.js"]
+		}
+	],
+	"manifest_version" : 2
+}
+
+

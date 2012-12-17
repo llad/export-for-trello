@@ -15,9 +15,8 @@ Install
 Usage
 -----
 1. From a board, click on the board title
-2. Select 'Share, print, and export...'
+2. Click on Share, print, and export...
 3. Click on Export Excel
-
 
 Credit
 ------

@@ -1,4 +1,4 @@
-trelloExport
+TrelloExport
 ============
 
 Chrome extension to export data from Trello.
@@ -11,6 +11,13 @@ Install
 4. Click on Developer Mode checkbox
 5. Click on Load unpacked extension...
 6. Select the folder containing the source files
+
+Usage
+-----
+1. From a board, click on the board title
+2. Select 'Share, print, and export...'
+3. Click on Export Excel
+
 
 Credit
 ------

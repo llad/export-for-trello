@@ -1,8 +1,3 @@
-// Variables
-var reg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
-
-
-
 //what to do when DOM loads
 $(function(){
     $('.js-share').live('mouseup',function(){
@@ -29,55 +24,45 @@ function checkExport() {
 			})
 			.text('Export Excel')
 			.click(showExcelExport)
-			.insertAfter($js_btn)
+			.insertAfter($js_btn.parent())
 			.wrap(document.createElement("li"));
 }
 
 function showExcelExport() {
-	$excel_btn.text('Generating...');
+    
+    
+    // RegEx to find the points for users of TrelloScrum
+    var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
 
 	$.getJSON($('a.js-export-json').attr('href'), function(data) {
 		var s = '<table id="export" border=1>';
-		s += '<tr><th>Points</th><th>Story</th><th>Description</th></tr>';
+		s += '<tr><th>Story</th><th>Description</th><th>Points</th></tr>';
 		$.each(data['lists'], function(key, list) {
 			var list_id = list["id"];
 			s += '<tr><th colspan="3">' + list['name'] + '</th></tr>';
-
-			$.each(data["cards"], function(key, card) {
+			    
+    		$.each(data["cards"], function(key, card) {
 				if (card["idList"] == list_id) {
 					var title = card["name"];
-					var parsed = title.match(reg);
+					var parsed = title.match(pointReg);
 					var points = parsed?parsed[1]:'';
-					title = title.replace(reg,'');
-					s += '<tr><td>'+ points + '</td><td>' + title + '</td><td>' + card["desc"] + '</td></tr>';
+					title = title.replace(pointReg,'');
+					s += '<tr><td>' + title + '</td><td>' + card["desc"] + '</td><td>'+ points + '</td></tr>';
 				}
 			});
 			s += '<tr><td colspan=3></td></tr>';
 		});
 		s += '</table>';
 
-		var blob = new Blob([s], { type: 'application/ms-excel' });
 
-		var board_title_reg = /.*\/board\/(.*)\//;
-		var board_title_parsed = document.location.href.match(board_title_reg);
-		var board_title = board_title_parsed[1];
-
-		$excel_btn
-			.text('Excel')
-			.after(
-				$excel_dl=$('<a>')
-					.attr({
-						download: board_title + '.xls',
-						href: window.URL.createObjectURL(blob)
-					})
-			);
-
-		var evt = document.createEvent('MouseEvents');
-		evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-		$excel_dl[0].dispatchEvent(evt);
-		$excel_dl.remove()
-
-	});
+		var blob = new Blob([s], { type: 'application/vnd.ms-excel' });
+		var board_title = data.name;
+		saveAs(blob, board_title + '.xls');
+        $("a.close-btn")[0].click();
+    
+    
+    });
 
 	return false
+	
 };

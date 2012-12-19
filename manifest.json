@@ -5,7 +5,14 @@
 	"content_scripts": [
 		{
 			"matches": ["https://trello.com/*"],
-			"js": ["jquery-1.8.3.min.js","trelloexport.js","FileSaver.min.js","showdown.js"]
+			"js": ["jquery-1.8.3.min.js",
+                   "trelloexport.js",
+                   "FileSaver.min.js",
+                   "xlsx.js",
+                   "jszip.js",
+                   "jszip-load.js",
+                   "jszip-inflate.js",
+                   "jszip-deflate.js"]
 		}
 	],
 	"manifest_version" : 2

@@ -36,9 +36,9 @@ function showExcelExport() {
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
         var file = {
             worksheets: [[]], // worksheets has one empty worksheet (array)
-            creator: 'John Smith',
-            created: new Date('8/16/2012'),
-            lastModifiedBy: 'Larry Jones',
+            creator: 'TrelloExport',
+            created: new Date(),
+            lastModifiedBy: 'TrelloExport',
             modified: new Date(),
             activeWorksheet: 0
             },
@@ -46,81 +46,56 @@ function showExcelExport() {
             w.name = data.name;
             w.data = [];
             w.data.push([]);
-            w.data[0] = ['List', 'Title', 'Description', 'Points'];
+            w.data[0] = ['List', 'Title', 'Description', 'Points', 'Due'];
             $.each(data.lists, function (key, list) {
-            var list_id = list.id;
-
-            $.each(data.cards, function (key, card) {
+                var list_id = list.id;
+                
+                $.each(data.cards, function (i, card) {
                 if (card.idList == list_id) {
                     var title = card.name;
                     var parsed = title.match(pointReg);
                     var points = parsed ? parsed[1] : '';
                     title = title.replace(pointReg, '');
+                    var due = card.due || '';
                     
-                    var r = w.data.push([]) - 1;
-                    console.log(r);
-
-                    w.data[r] = [list.name, title, card.desc, points];
+                    /* Member Listing Under Construction
+                    var memberIDs = card.idMembers;
+                    var memberInitials = [];
+                    $.each(data.members, function (key, member) {
+                        if (member.id == memberIDs[i]) {
+                            console.log(memberIDs[i]);
+                            memberInitials.push(member.initials);
+                        }
+                    });
+                    */
+                        var r = w.data.push([]) - 1;
+                        w.data[r] = [list.name,
+                                    title,
+                                    card.desc,
+                                    points,
+                                    due,
+                                    //memberInitials.toString()
+                                    ];
                     
-                }
+                    }
             });
         });
 
+        byteString = window.atob(xlsx(file).base64);
+        var buffer = new ArrayBuffer(byteString.length);
+        var ia = new Uint8Array(buffer);
         
-        /*
+        // write the bytes of the string to an ArrayBuffer
+        for (var i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
         
-        
-            
-        
-        var s = '<table id="export" border=1>';
-        s += '<tr><th>Story</th><th>Description</th><th>Points</th></tr>';
-        $.each(data.lists, function (key, list) {
-            var list_id = list.id;
-            s += '<tr><th colspan="3">' + list.name + '</th></tr>';
-
-            $.each(data.cards, function (key, card) {
-                if (card.idList == list_id) {
-                    var title = card.name;
-                    var parsed = title.match(pointReg);
-                    var points = parsed ? parsed[1] : '';
-                    title = title.replace(pointReg, '');
-                    s += '<tr><td>' + title + '</td><td>' + card.desc + '</td><td>' + points + '</td></tr>';
-                }
-            });
-            s += '<tr><td colspan=3></td></tr>';
-        });
-        s += '</table>';
-
-
-        var blob = new Blob([s], {
-            type: 'application/vnd.ms-excel'
+        var blob = new Blob([ia], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         });
         var board_title = data.name;
-        saveAs(blob, board_title + '.xls');
+        saveAs(blob, board_title + '.xlsx');
         $("a.close-btn")[0].click();
-
-        var file = {
-            worksheets: [[]], // worksheets has one empty worksheet (array)
-            creator: 'John Smith',
-            created: new Date('8/16/2012'),
-            lastModifiedBy: 'Larry Jones',
-            modified: new Date(),
-            activeWorksheet: 0
-        }, w = file.worksheets[0]; // cache current worksheet
-        w.name = board_title;
-        
-        
-        
-        
-        $('#Worksheet1').find('tr').each(function () {
-            var r = w.push([]) - 1; // index of current row
-            $(this).find('input').each(function () {
-                w[r].push(this.value);
-            });
-        });
-        */
-        
-        window.location = xlsx(file).href();
 
 
     });

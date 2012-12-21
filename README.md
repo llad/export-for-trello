@@ -3,8 +3,13 @@ TrelloExport
 
 Chrome extension to export data from Trello.
 
-Install
--------
+Install Published Version
+-------------------------
+Grab it from the [Chrome Web Store](https://chrome.google.com/webstore/detail/trelloexport/nhdelomnagopgaealggpgojkhcafhnin?hl=en).
+
+
+Install Development Version
+---------------------------
 1. Download the repository as a zip file
 2. Extract zip
 3. Go to Chrome Exensions: [chrome://chrome/extensions/](chrome://chrome/extensions/)
@@ -20,4 +25,9 @@ Usage
 
 Credit
 ------
-This borrows heavily from some non-functioning code I found hiding in [TrelloScrum](https://github.com/Q42/TrelloScrum/).
+Inspired by some non-functioning code I found hiding in [TrelloScrum](https://github.com/Q42/TrelloScrum/).
+
+
+Notes
+-----
+Watch out for that xlsx.js license from Microsoft.

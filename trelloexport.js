@@ -1,19 +1,36 @@
-//what to do when DOM loads
+/*!
+ * TrelloExport
+ * https://github.com/llad/trelloExport
+ *
+ * Credit:
+ * Started from: https://github.com/Q42/TrelloScrum
+ */
+
+// Variables
+var $excel_btn;
+window.URL = window.webkitURL || window.URL;
+
+
+// on DOM load
 $(function () {
+    
+    // Look for clicks on the .js-share class, which is
+    // the "Share, Print, Export..." link on the board header option list
     $('.js-share').live('mouseup', function () {
-        setTimeout(checkExport);
+        setTimeout(addExportLink);
     });
 });
 
-//for export
-var $excel_btn, $excel_dl;
-window.URL = window.webkitURL || window.URL;
 
-function checkExport() {
+// Add a Export Excel button to the DOM and trigger export if clicked
+function addExportLink() { 
+   
+    var $js_btn = $('a.js-export-json'); // Export JSON link
+    
+    // See if our Export Excel is already there
     if ($('form').find('.js-export-excel').length) return;
-    var $js_btn = $('a.js-export-json');
-
-
+    
+    // The new link/button
     if ($js_btn.length) $excel_btn = $('<a>')
         .attr({
         class: 'js-export-excel',
@@ -22,13 +39,12 @@ function checkExport() {
         title: 'Open downloaded file with Excel'
     })
         .text('Export Excel')
-        .click(showExcelExport)
+        .click(createExcelExport)
         .insertAfter($js_btn.parent())
         .wrap(document.createElement("li"));
 }
 
-function showExcelExport() {
-
+function createExcelExport() {
 
     // RegEx to find the points for users of TrelloScrum
     var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
@@ -46,7 +62,7 @@ function showExcelExport() {
             w.name = data.name;
             w.data = [];
             w.data.push([]);
-            w.data[0] = ['List', 'Title', 'Description', 'Points', 'Due'];
+            w.data[0] = ['List', 'Title', 'Description', 'Points', 'Due', 'Members'];
             $.each(data.lists, function (key, list) {
                 var list_id = list.id;
                 
@@ -58,25 +74,32 @@ function showExcelExport() {
                     title = title.replace(pointReg, '');
                     var due = card.due || '';
                     
-                    /* Member Listing Under Construction
+                    //Get all the Member IDs
                     var memberIDs = card.idMembers;
                     var memberInitials = [];
-                    $.each(data.members, function (key, member) {
-                        if (member.id == memberIDs[i]) {
-                            console.log(memberIDs[i]);
-                            memberInitials.push(member.initials);
-                        }
+                    $.each(memberIDs, function (i, memberID){
+                        $.each(data.members, function (key, member) {
+                            if (member.id == memberID) {
+                                memberInitials.push(member.initials);
+                            }
+                        });
                     });
-                    */
-                        var r = w.data.push([]) - 1;
-                        w.data[r] = [list.name,
-                                    title,
-                                    card.desc,
-                                    points,
-                                    due,
-                                    //memberInitials.toString()
-                                    ];
                     
+                    //Format Due date field
+                    if (due !== '' ){
+                        var d = new Date(due);
+                        due = d;
+                        //due = d.getMonth() + '/' + d.getDate() + '/' + d.getFullYear().toString().substring(2, 4);
+                    }
+                                        
+                    var r = w.data.push([]) - 1;
+                    w.data[r] = [list.name,
+                                title,
+                                card.desc,
+                                points,
+                                due,
+                                memberInitials.toString()
+                                ];
                     }
             });
         });

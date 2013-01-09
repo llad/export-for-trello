@@ -7,9 +7,10 @@
  */
 
 // Variables
-var $excel_btn;
-window.URL = window.webkitURL || window.URL;
+var $excel_btn,
+    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels'];
 
+window.URL = window.webkitURL || window.URL;
 
 // on DOM load
 $(function () {
@@ -50,28 +51,54 @@ function createExcelExport() {
     var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
 
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
+            
         var file = {
-            worksheets: [[]], // worksheets has one empty worksheet (array)
+            worksheets: [[],[]], // worksheets has one empty worksheet (array)
             creator: 'TrelloExport',
             created: new Date(),
             lastModifiedBy: 'TrelloExport',
             modified: new Date(),
             activeWorksheet: 0
             },
-            w = file.worksheets[0]; // cache current worksheet
+            
+            // Setup the active list and cart worksheet
+            w = file.worksheets[0]; 
             w.name = data.name;
             w.data = [];
             w.data.push([]);
-            w.data[0] = ['List', 'Title', 'Description', 'Points', 'Due', 'Members'];
+            w.data[0] = columnHeadings;
+            
+            
+            // Setup the archive list and cart worksheet            
+            wArchived = file.worksheets[1]; 
+            wArchived.name = 'Archived ' + data.name;
+            wArchived.data = [];
+            wArchived.data.push([]);
+            wArchived.data[0] = columnHeadings;
+            
+            // This iterates through each list and builds the dataset                     
             $.each(data.lists, function (key, list) {
                 var list_id = list.id;
+                var listName = list.name;                                            
                 
+                // tag archived lists
+                if (list.closed) {
+                    listName = '[archived] ' + listName;
+                }
+                
+                // Iterate through each card and transform data as needed
                 $.each(data.cards, function (i, card) {
                 if (card.idList == list_id) {
                     var title = card.name;
                     var parsed = title.match(pointReg);
                     var points = parsed ? parsed[1] : '';
                     title = title.replace(pointReg, '');
+                    
+                    // tag archived cards
+                    if (card.closed) {
+                        title = '[archived] ' + title;
+                    }
+                    
                     var due = card.due || '';
                     
                     //Get all the Member IDs
@@ -85,25 +112,51 @@ function createExcelExport() {
                         });
                     });
                     
-                    //Format Due date field
+                    //Get all labels
+                    var labels = [];
+                    $.each(card.labels, function (i, label){
+                        if (label.name) {
+                            labels.push(label.name);
+                        }
+                        else {
+                            labels.push(label.color);
+                        }
+
+                    });
+                    
+                    // Need to set dates to the Date type so xlsx.js sets the right datatype
                     if (due !== '' ){
                         var d = new Date(due);
                         due = d;
-                        //due = d.getMonth() + '/' + d.getDate() + '/' + d.getFullYear().toString().substring(2, 4);
                     }
-                                        
-                    var r = w.data.push([]) - 1;
-                    w.data[r] = [list.name,
-                                title,
-                                card.desc,
-                                points,
-                                due,
-                                memberInitials.toString()
-                                ];
+                    
+                    var rowData = [
+                            listName,
+                            title,
+                            card.desc,
+                            points,
+                            due,
+                            memberInitials.toString(),
+                            labels.toString()
+                            ];
+                    
+                    // Writes all closed items to the Archived tab
+                    // Note: Trello allows open cards on closed lists
+                    if (list.closed || card.closed) {
+                        var rArch = wArchived.data.push([]) - 1;
+                        wArchived.data[rArch] = rowData;
+                                                                                
                     }
+                    else {                                         
+                        var r = w.data.push([]) - 1;
+                        w.data[r] = rowData;
+                    }
+                }
             });
         });
-
+        
+        // We want just the base64 part of the output of xlsx.js
+        // since we are not leveraging they standard transfer process.
         byteString = window.atob(xlsx(file).base64);
         var buffer = new ArrayBuffer(byteString.length);
         var ia = new Uint8Array(buffer);
@@ -113,6 +166,7 @@ function createExcelExport() {
             ia[i] = byteString.charCodeAt(i);
         }
         
+        // create blob and save it using FileSaver.js
         var blob = new Blob([ia], {
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         });
@@ -122,7 +176,5 @@ function createExcelExport() {
 
 
     });
-
-    return false;
 
 }

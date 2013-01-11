@@ -4,11 +4,17 @@
  *
  * Credit:
  * Started from: https://github.com/Q42/TrelloScrum
+ * 
+ * Modified by A.Velo
+ * https://github.com/trapias/trelloExport
+ * Whatsnew:
+	- export cpoints to a new column
+	
  */
 
 // Variables
 var $excel_btn,
-    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels'];
+    columnHeadings = ['List', 'Title', 'Description', 'Points', 'CPoints', 'Due', 'Members', 'Labels'];
 
 window.URL = window.webkitURL || window.URL;
 
@@ -49,7 +55,15 @@ function createExcelExport() {
 
     // RegEx to find the points for users of TrelloScrum
     var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
-
+	var cpointReg = /[\[](\x3f|\d*\.?\d+)([\]])\s?/m;
+	
+	/*
+		TrelloScrum
+		reg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m, //parse regexp- accepts digits, decimals and '?', surrounded by ()
+		regC = /[\[](\x3f|\d*\.?\d+)([\]])\s?/m, //parse regexp- accepts digits, decimals and '?', surrounded by []
+	*/
+	
+	
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
             
         var file = {
@@ -90,10 +104,24 @@ function createExcelExport() {
                 $.each(data.cards, function (i, card) {
                 if (card.idList == list_id) {
                     var title = card.name;
+					
+					//points for estimated hours
                     var parsed = title.match(pointReg);
-                    var points = parsed ? parsed[1] : '';
+                    var points = parsed ? parsed[1] : '0';
                     title = title.replace(pointReg, '');
                     
+					if(points=='?') points='0';
+					
+					//cpoints for worked hours
+					var cparsed = title.match(cpointReg);
+                    var cpoints = cparsed ? cparsed[1] : '0';
+                    title = title.replace(cpointReg, '');
+					
+					/* console.log('title=' + title);
+					console.log('points=' + points);
+					console.log('cpoints=' + cpoints); */
+					
+					
                     // tag archived cards
                     if (card.closed) {
                         title = '[archived] ' + title;
@@ -130,11 +158,13 @@ function createExcelExport() {
                         due = d;
                     }
                     
+					
                     var rowData = [
                             listName,
                             title,
                             card.desc,
                             points,
+							cpoints,
                             due,
                             memberInitials.toString(),
                             labels.toString()

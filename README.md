@@ -31,3 +31,8 @@ Inspired by some non-functioning code I found hiding in [TrelloScrum](https://gi
 Notes
 -----
 Watch out for that xlsx.js license from Microsoft.
+
+Fork Whatsnew
+-----
+1. export cpoints to a new column
+

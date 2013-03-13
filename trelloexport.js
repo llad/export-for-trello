@@ -8,6 +8,7 @@
 
 // Variables
 var $excel_btn,
+    addInterval,
     columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels'];
 
 window.URL = window.webkitURL || window.URL;
@@ -17,19 +18,23 @@ $(function () {
     
     // Look for clicks on the .js-share class, which is
     // the "Share, Print, Export..." link on the board header option list
-    $('.js-share').live('mouseup', function () {
-        setTimeout(addExportLink);
+    $(document).on('mouseup', ".js-share", function () {
+        addInterval = setInterval(addExportLink,500);
     });
 });
 
 
 // Add a Export Excel button to the DOM and trigger export if clicked
-function addExportLink() { 
+function addExportLink() {
+    //alert('add');
    
     var $js_btn = $('a.js-export-json'); // Export JSON link
     
     // See if our Export Excel is already there
-    if ($('form').find('.js-export-excel').length) return;
+    if ($('.pop-over-list').find('.js-export-excel').length) {
+        clearInterval(addInterval);
+        return;
+    }
     
     // The new link/button
     if ($js_btn.length) $excel_btn = $('<a>')
@@ -43,6 +48,7 @@ function addExportLink() {
         .click(createExcelExport)
         .insertAfter($js_btn.parent())
         .wrap(document.createElement("li"));
+    
 }
 
 function createExcelExport() {

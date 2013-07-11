@@ -1,4 +1,4 @@
-TrelloExport
+Export for Trello
 ============
 
 Chrome extension to export data from Trello.

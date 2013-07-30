@@ -1,6 +1,6 @@
 /*!
  * TrelloExport
- * https://github.com/llad/trelloExport
+ * https://github.com/llad/export-for-trello
  *
  * Credit:
  * Started from: https://github.com/Q42/TrelloScrum
@@ -9,7 +9,7 @@
 // Variables
 var $excel_btn,
     addInterval,
-    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels'];
+    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels', 'Card #'];
 
 window.URL = window.webkitURL || window.URL;
 
@@ -143,7 +143,8 @@ function createExcelExport() {
                             points,
                             due,
                             memberInitials.toString(),
-                            labels.toString()
+                            labels.toString(),
+                            card.idShort
                             ];
                     
                     // Writes all closed items to the Archived tab

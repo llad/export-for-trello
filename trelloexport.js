@@ -69,7 +69,7 @@ function createExcelExport() {
             
             // Setup the active list and cart worksheet
             w = file.worksheets[0]; 
-            w.name = data.name;
+            w.name = 'Current';
             w.data = [];
             w.data.push([]);
             w.data[0] = columnHeadings;
@@ -77,7 +77,7 @@ function createExcelExport() {
             
             // Setup the archive list and cart worksheet            
             wArchived = file.worksheets[1]; 
-            wArchived.name = 'Archived ' + data.name;
+            wArchived.name = 'Archived';
             wArchived.data = [];
             wArchived.data.push([]);
             wArchived.data[0] = columnHeadings;

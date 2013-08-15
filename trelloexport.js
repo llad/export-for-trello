@@ -6,7 +6,7 @@
  * Started from: https://github.com/Q42/TrelloScrum
  */
 
-/*jslint browser: true */
+/*jslint browser: true, devel: false*/
 
 // Globals
 var $,
@@ -93,8 +93,8 @@ function createExcelExport() {
                             labels.toString(),
                             card.idShort
                         ],
-                        rArch = wArchived.data.push([]) - 1,
-                        r = w.data.push([]) - 1;
+                        rArch,
+                        r;
                     
                     title = title.replace(pointReg, '');
                     
@@ -130,9 +130,11 @@ function createExcelExport() {
                     // Writes all closed items to the Archived tab
                     // Note: Trello allows open cards on closed lists
                     if (list.closed || card.closed) {
+                        rArch = wArchived.data.push([]) - 1;
                         wArchived.data[rArch] = rowData;
                                                                                 
                     } else {
+                        r = w.data.push([]) - 1;
                         w.data[r] = rowData;
                     }
                 }

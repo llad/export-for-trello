@@ -79,20 +79,11 @@ function createExcelExport() {
                         parsed = title.match(pointReg),
                         points = parsed ? parsed[1] : '',
                         due = card.due || '',
-                        memberIDs = card.idMembers,
+                        memberIDs,
                         memberInitials = [],
                         labels = [],
                         d = new Date(due),
-                        rowData = [
-                            listName,
-                            title,
-                            card.desc,
-                            points,
-                            due,
-                            memberInitials.toString(),
-                            labels.toString(),
-                            card.idShort
-                        ],
+                        rowData = [],
                         rArch,
                         r;
                     
@@ -103,7 +94,7 @@ function createExcelExport() {
                         title = '[archived] ' + title;
                     }
                     
-                    
+                    memberIDs = card.idMembers;
                     $.each(memberIDs, function (i, memberID) {
                         $.each(data.members, function (key, member) {
                             if (member.id === memberID) {
@@ -126,6 +117,17 @@ function createExcelExport() {
                     if (due !== '') {
                         due = d;
                     }
+                    
+                    rowData = [
+                        listName,
+                        title,
+                        card.desc,
+                        points,
+                        due,
+                        memberInitials.toString(),
+                        labels.toString(),
+                        card.idShort
+                    ];
                 
                     // Writes all closed items to the Archived tab
                     // Note: Trello allows open cards on closed lists

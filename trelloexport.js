@@ -15,13 +15,15 @@ var $,
     ArrayBuffer,
     Uint8Array,
     Blob,
-    saveAs;
+    saveAs,
+    actionsCreateCard,
+    idBoard;
 
 
 // Variables
 var $excel_btn,
     addInterval,
-    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels', 'Card #'];
+    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels', 'Card #', 'Card ID','Member Created','DateTime Created'];
 
 window.URL = window.webkitURL || window.URL;
 
@@ -31,7 +33,9 @@ function createExcelExport() {
     var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
 
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
-            
+        
+        idBoard = data.id;
+        
         var file = {
             worksheets: [[], []], // worksheets has one empty worksheet (array)
             creator: 'TrelloExport',
@@ -85,7 +89,9 @@ function createExcelExport() {
                         d = new Date(due),
                         rowData = [],
                         rArch,
-                        r;
+                        r,
+                        memberCreator,
+                        datetimeCreated;
                     
                     title = title.replace(pointReg, '');
                     
@@ -113,6 +119,27 @@ function createExcelExport() {
     
                     });
                     
+                    //Get member created and DateTime created
+                    var query = Enumerable.from(data.actions)
+                      .where(function(x){if(x.data.card){return x.data.card.id == card.id && x.type=="createCard"}})
+                      .toArray();
+                    if (query.length > 0){
+                      memberCreator = query[0].memberCreator.fullName;
+                      datetimeCreated = query[0].date;
+                    }
+                    else {
+                      //use the API to get the action created method
+                      var actionCreateCard = getCreateCardAction(card.id)
+                      if (actionCreateCard){
+                        memberCreator = actionCreateCard.memberCreator.fullName;
+                        datetimeCreated = actionCreateCard.date;
+                      }
+                      else{
+                        memberCreator = "";
+                        datetimeCreated = "";
+                      }
+                    }
+                    
                     // Need to set dates to the Date type so xlsx.js sets the right datatype
                     if (due !== '') {
                         due = d;
@@ -126,7 +153,10 @@ function createExcelExport() {
                         due,
                         memberInitials.toString(),
                         labels.toString(),
-                        card.idShort
+                        card.idShort,
+                        card.shortLink,
+                        memberCreator,
+                        datetimeCreated
                     ];
                 
                     // Writes all closed items to the Archived tab
@@ -165,6 +195,23 @@ function createExcelExport() {
 
     });
 
+}
+
+function getCreateCardAction(idCard) {
+  if (!actionsCreateCard){
+    $.ajax({
+      url:'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=1000', 
+      dataType:'json',
+      async: false,
+      success: function(actionsData) {
+        actionsCreateCard = actionsData;
+      }
+    });
+  }
+  var query = Enumerable.from(actionsCreateCard)
+    .where(function(x){if(x.data.card){return x.data.card.id == idCard}})
+    .toArray();
+  return query.length > 0 ? query[0] : false;
 }
 
 

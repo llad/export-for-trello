@@ -21,7 +21,7 @@ var $,
 // Variables
 var $excel_btn,
     addInterval,
-    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels', 'Card #', 'Card ID'];
+    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels', 'Card #', 'Card ID','Member Created','DateTime Created'];
 
 window.URL = window.webkitURL || window.URL;
 
@@ -85,7 +85,9 @@ function createExcelExport() {
                         d = new Date(due),
                         rowData = [],
                         rArch,
-                        r;
+                        r,
+                        memberCreator,
+                        datetimeCreated;
                     
                     title = title.replace(pointReg, '');
                     
@@ -113,6 +115,34 @@ function createExcelExport() {
     
                     });
                     
+                    //Get member created and DateTime created
+                    var query = Enumerable.from(data.actions)
+                      .where(function(x){if(x.data.card){return x.data.card.id == card.id && x.type=="createCard"}})
+                      .toArray();
+                    if (query.length > 0){
+                      memberCreator = query[0].memberCreator.fullName;
+                      datetimeCreated = query[0].date;
+                    }
+                    else {
+                      //we couldn't find the data via JSON export, so get it from the API. Ugh. This is really
+                      //slow. You could do this a lot smarter with 
+                      $.ajax({
+                        url:'https://trello.com/1/cards/' + card.id + '/actions?filter=createCard', 
+                        dataType:'json',
+                        async: false,
+                        success: function(cardData) {
+                          if (cardData.length > 0){
+                            memberCreator = cardData[0].memberCreator.fullName;
+                            datetimeCreated = cardData[0].date;
+                          }
+                          else{
+                            memberCreator = "";
+                            datetimeCreated = "";
+                          }
+                        }
+                      });
+                    }
+                    
                     // Need to set dates to the Date type so xlsx.js sets the right datatype
                     if (due !== '') {
                         due = d;
@@ -127,7 +157,9 @@ function createExcelExport() {
                         memberInitials.toString(),
                         labels.toString(),
                         card.idShort,
-                        card.shortLink
+                        card.shortLink,
+                        memberCreator,
+                        datetimeCreated
                     ];
                 
                     // Writes all closed items to the Archived tab

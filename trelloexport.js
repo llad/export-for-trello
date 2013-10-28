@@ -15,7 +15,9 @@ var $,
     ArrayBuffer,
     Uint8Array,
     Blob,
-    saveAs;
+    saveAs,
+    actionsCreateCard,
+    idBoard;
 
 
 // Variables
@@ -31,7 +33,9 @@ function createExcelExport() {
     var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
 
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
-            
+        
+        idBoard = data.id;
+        
         var file = {
             worksheets: [[], []], // worksheets has one empty worksheet (array)
             creator: 'TrelloExport',
@@ -124,23 +128,16 @@ function createExcelExport() {
                       datetimeCreated = query[0].date;
                     }
                     else {
-                      //we couldn't find the data via JSON export, so get it from the API. Ugh. This is really
-                      //slow. You could do this a lot smarter with 
-                      $.ajax({
-                        url:'https://trello.com/1/cards/' + card.id + '/actions?filter=createCard', 
-                        dataType:'json',
-                        async: false,
-                        success: function(cardData) {
-                          if (cardData.length > 0){
-                            memberCreator = cardData[0].memberCreator.fullName;
-                            datetimeCreated = cardData[0].date;
-                          }
-                          else{
-                            memberCreator = "";
-                            datetimeCreated = "";
-                          }
-                        }
-                      });
+                      //use the API to get the action created method
+                      var actionCreateCard = getCreateCardAction(card.id)
+                      if (actionCreateCard){
+                        memberCreator = actionCreateCard.memberCreator.fullName;
+                        datetimeCreated = actionCreateCard.date;
+                      }
+                      else{
+                        memberCreator = "";
+                        datetimeCreated = "";
+                      }
                     }
                     
                     // Need to set dates to the Date type so xlsx.js sets the right datatype
@@ -198,6 +195,23 @@ function createExcelExport() {
 
     });
 
+}
+
+function getCreateCardAction(idCard) {
+  if (!actionsCreateCard){
+    $.ajax({
+      url:'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=1000', 
+      dataType:'json',
+      async: false,
+      success: function(actionsData) {
+        actionsCreateCard = actionsData;
+      }
+    });
+  }
+  var query = Enumerable.from(actionsCreateCard)
+    .where(function(x){if(x.data.card){return x.id == idCard}})
+    .toArray();
+  return query.length > 1 ? query[0] : false;
 }
 
 

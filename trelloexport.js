@@ -209,9 +209,9 @@ function getCreateCardAction(idCard) {
     });
   }
   var query = Enumerable.from(actionsCreateCard)
-    .where(function(x){if(x.data.card){return x.id == idCard}})
+    .where(function(x){if(x.data.card){return x.data.card.id == idCard}})
     .toArray();
-  return query.length > 1 ? query[0] : false;
+  return query.length > 0 ? query[0] : false;
 }
 
 

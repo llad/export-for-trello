@@ -21,7 +21,7 @@ var $,
 // Variables
 var $excel_btn,
     addInterval,
-    columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels', 'Card #'];
+    columnHeadings = ['List', 'Title', 'Description', 'Points Estimated', 'Points Spent', 'Due', 'Members', 'Labels', 'Card #'];
 
 window.URL = window.webkitURL || window.URL;
 
@@ -29,6 +29,7 @@ function createExcelExport() {
     "use strict";
     // RegEx to find the points for users of TrelloScrum
     var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
+    var spentReg = /[\[](\x3f|\d*\.?\d+)([\]])\s?/m;
 
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
             
@@ -78,6 +79,8 @@ function createExcelExport() {
                     var title = card.name,
                         parsed = title.match(pointReg),
                         points = parsed ? parsed[1] : '',
+                        parsedSpent = title.match(spentReg),
+                        spent = parsedSpent ? parsedSpent[1] : '',
                         due = card.due || '',
                         memberIDs,
                         memberInitials = [],
@@ -88,6 +91,7 @@ function createExcelExport() {
                         r;
                     
                     title = title.replace(pointReg, '');
+                    title = title.replace(spentReg, '');
                     
                     // tag archived cards
                     if (card.closed) {
@@ -123,6 +127,7 @@ function createExcelExport() {
                         title,
                         card.desc,
                         points,
+                        spent,
                         due,
                         memberInitials.toString(),
                         labels.toString(),

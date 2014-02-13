@@ -50,6 +50,7 @@ There are currently no limits in the number of checklists, checklist items or at
 
 ###How to install
 This fork is not on the Chrome Web Store, but you can manually install it by following these steps:
+
 1. Download the repository as a zip file
 2. Extract zip
 3. Go to Chrome Exensions: [chrome://chrome/extensions/](chrome://chrome/extensions/)

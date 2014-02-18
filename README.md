@@ -69,7 +69,7 @@ This fork is not on the Chrome Web Store, but you can manually install it by fol
 ---
 
 ###What's next?
-I wish to add a configuration dialog to set some options before exporting, e.g. to choose which lists to export, to set the limit onn the number of comments to extract etc.
+I wish to add a configuration dialog to set some options before exporting, e.g. to choose which lists to export, to set the limit on the number of comments to extract etc.
 Suggestions are welcome!
 
 

@@ -7,7 +7,7 @@
  * 
  * Forked by @trapias (Alberto Velo)
  * https://github.com/trapias/trelloExport
- * Whatsnew:
+ * Whatsnew for version 1.8.8:
 	- export Trello Plus Spent and Estimate data
 	- export checklists
 	- export comments (see commentLimit, default 100)
@@ -15,13 +15,28 @@
 	- export votes
 	- use updated version of xlsx.js, modified by me (escapeXML)
 	- use updated version of jquery, 2.1.0
+* Whatsnew for version 1.8.9:
+	- added column Card #
+	- added columns memberCreator, datetimeCreated, datetimeDone and memberDone pulling modifications from https://github.com/bmccormack/export-for-trello/blob/5b2b8b102b98ed2c49241105cb9e00e44d4e1e86/trelloexport.js
+	- added linq.min.js library to support linq queries for the above modifications
  */
 
+ var $,
+    byteString,
+    xlsx,
+    ArrayBuffer,
+    Uint8Array,
+    Blob,
+    saveAs,
+    actionsCreateCard,
+    actionsMoveCard,
+    idBoard=0;
+	
 // Variables
 var $excel_btn,
-    columnHeadings = ['List', 'Title', 'Link', 'Description', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Due', 'Members', 'Labels'],
+    columnHeadings = ['List', 'Card #', 'Title', 'Link', 'Description', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Created', 'CreatedBy', 'Due', 'Done', 'DoneBy', 'Members', 'Labels'],
 	commentLimit = 100; // limit the number of comments to put in the spreadsheet
-
+	
 window.URL = window.webkitURL || window.URL;
 
 // on DOM load
@@ -36,11 +51,10 @@ $(function () {
     $('.js-share').on('mouseup', function () {
         setTimeout(addExportLink);
     });
-   }, 1000);
+   }, 300);
    
    //bind when opening side menu
    $('a.sidebar-show-btn').on('click', function(){
-   //console.log('clicked sidebar');
 	$('.js-share').on('mouseup', function () {
         setTimeout(addExportLink);
     });
@@ -48,6 +62,50 @@ $(function () {
    
 });
 
+if (typeof String.prototype.startsWith != 'function') {
+  // see below for better implementation!
+  String.prototype.startsWith = function (str){
+  //console.log(this + (this.indexOf(str) == 0 ? ' STARTSWITH' : '' + ' DOESNOTSTARTWITH') + ' ' + str);
+    return this.indexOf(str) == 0;
+  };
+}
+
+function getCreateCardAction(idCard) {
+  if (!actionsCreateCard){
+  //console.log('getCreateCardAction ' + 'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=1000');
+    $.ajax({
+      url:'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=1000', 
+      dataType:'json',
+      async: false,
+      success: function(actionsData) {
+        actionsCreateCard = actionsData;
+      }
+    });
+  }
+  var query = Enumerable.From(actionsCreateCard)
+    .Where(function(x){if(x.data.card){return x.data.card.id == idCard}})
+    .ToArray();
+  return query.length > 0 ? query[0] : false;
+}
+
+function getMoveCardAction(idCard, nameList) {
+  if (!actionsMoveCard){
+  //console.log('getMoveCardAction ' + 'https://trello.com/1/boards/' + idBoard + '/actions?filter=updateCard:idList&limit=1000');
+    $.ajax({
+      url:'https://trello.com/1/boards/' + idBoard + '/actions?filter=updateCard:idList&limit=1000', 
+      dataType:'json',
+      async: false,
+      success: function(actionsData) {
+        actionsMoveCard = actionsData;
+      }
+    });
+  }
+  var query = Enumerable.From(actionsMoveCard)
+    .Where(function(x){if(x.data.card && x.data.listAfter){return x.data.card.id == idCard && x.data.listAfter.name == nameList}})
+    .OrderByDescending(function(x){return x.date;})
+    .ToArray();
+  return query.length > 0 ? query[0] : false;
+}
 
 // Add a Export Excel button to the DOM and trigger export if clicked
 function addExportLink() { 
@@ -82,6 +140,7 @@ function createExcelExport() {
 	
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
 	
+		idBoard = data.id;
         var file = {
             worksheets: [[],[]], // worksheets has one empty worksheet (array)
             creator: 'TrelloExport',
@@ -129,11 +188,16 @@ function createExcelExport() {
                 if (card.idList == list_id) {
                     var title = card.name;
 					
-				console.log('TITLE ' + title);
+				console.log('Card #' + card.idShort + ' ' + title);
 				var spent=0; var estimate=0;
-				var checkListsText='';
-				var commentsText=''; var commentCounter=0;
-				var attachmentsText='';
+				var checkListsText='',
+					commentsText='', 
+					commentCounter=0,
+					attachmentsText='',
+					memberCreator='',
+					datetimeCreated=null,
+					memberDone,
+					datetimeDone ;
 				
 				//Trello Plus Spent/Estimate
 				//TODO: fix!!!
@@ -276,10 +340,55 @@ function createExcelExport() {
                         due = d;
                     }
                     
+					//pulled from https://github.com/bmccormack/export-for-trello/blob/5b2b8b102b98ed2c49241105cb9e00e44d4e1e86/trelloexport.js
+					//Get member created and DateTime created
+                    var query = Enumerable.From(data.actions)
+                      .Where(function(x){if(x.data.card){return x.data.card.id == card.id && x.type=="createCard"}})
+                      .ToArray();
+                    if (query.length > 0){
+                      memberCreator = query[0].memberCreator.fullName + ' (' + query[0].memberCreator.username + ')';
+                      datetimeCreated = query[0].date;
+                    }
+                    else {
+                      //use the API to get the action created method
+                      var actionCreateCard = getCreateCardAction(card.id);
+                      if (actionCreateCard){
+                        memberCreator = actionCreateCard.memberCreator.fullName;
+                        datetimeCreated = actionCreateCard.date;
+                      }
+                      else {
+                        memberCreator = "";
+                        datetimeCreated = "";
+                      }
+                    }
+					
+					 //Find out when the card was most recently moved to any list whose name starts with "Done"
+                    var nameListDone = "Done";
+                    var query = Enumerable.From(data.actions)
+                      .Where(function(x){if (x.data.card && x.data.listAfter){var listAfterName = x.data.listAfter.name; return x.data.card.id == card.id && listAfterName.startsWith(nameListDone);}})
+                      .OrderByDescending(function(x){return x.date;})
+                      .ToArray();
+                    if (query.length > 0){
+                      memberDone = query[0].memberCreator.fullName;
+                      datetimeDone = query[0].date;
+                    }
+                    else {
+                      var actionMoveCard = getMoveCardAction(card.id, nameListDone);
+                      if (actionMoveCard){
+                        memberDone = actionMoveCard.memberCreator.fullName;
+                        datetimeDone = actionMoveCard.date;
+                      }
+                      else {
+                        memberDone = "";
+                        datetimeDone = "";
+                      }
+                    }
+					
                     var rowData = [
                             listName,
+							card.idShort,
                             title,
-							'https://trello.com/c/' + card.id,
+							'https://trello.com/c/' + card.shortLink,
                             card.desc,
 							checkListsText,
 							commentsText,
@@ -287,7 +396,11 @@ function createExcelExport() {
 							card.idMembersVoted.length,
                             spent,
 							estimate,
+							datetimeCreated,
+							memberCreator,
                             due,
+							datetimeDone,
+							memberDone,
                             memberInitials.toString(),
                             labels.toString()
                             ];

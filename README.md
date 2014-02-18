@@ -18,6 +18,13 @@ This is a fork of the original TrelloExport extension, available at [https://git
 8. use updated version of jquery, 2.1.0
 9. use usernames instead of initials for members
 
+###Version 1.8.9
+Whatsnew for version 1.8.9:
+
+- added column Card #
+- added columns memberCreator, datetimeCreated, datetimeDone and memberDone pulling modifications from [https://github.com/bmccormack/export-for-trello/blob/5b2b8b102b98ed2c49241105cb9e00e44d4e1e86/trelloexport.js](https://github.com/bmccormack/export-for-trello/blob/5b2b8b102b98ed2c49241105cb9e00e44d4e1e86/trelloexport.js "https://github.com/bmccormack/export-for-trello/blob/5b2b8b102b98ed2c49241105cb9e00e44d4e1e86/trelloexport.js")
+- added linq.min.js library to support linq queries for the above modifications
+
 ---
 
 ####Notes
@@ -26,7 +33,11 @@ I put a couple of sample export files in the xlsx subfolder.
 
 **Columns**: the list of columns exported is now:
 
-	columnHeadings = ['List', 'Title', 'Link', 'Description', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Due', 'Members', 'Labels']
+	columnHeadings = ['List', 'Card #', 'Title', 'Link', 'Description', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Created', 'CreatedBy', 'Due', 'Done', 'DoneBy', 'Members', 'Labels']
+
+#####datetimeDone and memberDone
+These fields are calculated intercepting when a card was moved to the Done list. While bmccormack's code only checks for this list, I check for cards being moved to any list whose name starts with "Done" (e.g. using lists named "Done Bugfix", "Done New Feature" and so will work).
+
 
 ---
 

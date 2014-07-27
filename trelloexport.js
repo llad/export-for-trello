@@ -7,6 +7,7 @@
  * 
  * Forked by @trapias (Alberto Velo)
  * https://github.com/trapias/trelloExport
+ *
  * Whatsnew for version 1.8.8:
 	- export Trello Plus Spent and Estimate data
 	- export checklists
@@ -22,8 +23,10 @@
 * Whatsnew for version 1.9.0:
 	- switched to SheetJS library to export to excel, cfr https://github.com/SheetJS/js-xlsx
 	- unicode characters are now correctly exported
+* Whatsnew for version 1.9.1:
+    - fixed button loading
+    - some code cleaning
  */
-
  var $,
     byteString,
     xlsx,
@@ -44,25 +47,13 @@ window.URL = window.webkitURL || window.URL;
 
 // on DOM load
 $(function () {
- //  $(window).load(function () { 
-   
-   //todo: fix loading when side menu is collapsed
-   
-   setTimeout(function(){
+    //1.9.1: fix button loading
     // Look for clicks on the .js-share class, which is
     // the "Share, Print, Export..." link on the board header option list
     $('.js-share').on('mouseup', function () {
-        setTimeout(addExportLink);
-    });
-   }, 300);
-   
-   //bind when opening side menu
-   $('a.sidebar-show-btn').on('click', function(){
-	$('.js-share').on('mouseup', function () {
-        setTimeout(addExportLink);
-    });
-   });
-   
+        console.log('js-share');
+        setTimeout(function(){addExportLink();}, 300);
+    });  
 });
 
 function sheet_from_array_of_arrays(data, opts) {
@@ -98,7 +89,6 @@ function Workbook() {
 	this.SheetNames = [];
 	this.Sheets = {};
 }
-
 
 function s2ab(s) {
 	var buf = new ArrayBuffer(s.length);
@@ -180,14 +170,11 @@ function createExcelExport() {
 	
 	console.log('Start export...');
 	
-	
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
-	
-		idBoard = data.id;
+		    idBoard = data.id;
 		
-        // Setup the active list and cart worksheet
-		w=new Object();
-		
+            // Setup the active list and cart worksheet
+            w=new Object();
 			if(data.name.length>30)
 				w.name = data.name.substr(0,30);
 			else
@@ -196,17 +183,10 @@ function createExcelExport() {
             w.data.push([]);
             w.data[0] = columnHeadings;
             
-            
             // Setup the archive list and cart worksheet            
-//            wArchived = file.worksheets[1]; 
-		wArchived=new Object();
+		    wArchived=new Object();
 			wArchived.name = 'Archived cards';
-			/* if(data.name.length>11)
-				wArchived.name = 'Archived ' + data.name.substr(0,11);
-			else
-				wArchived.name = 'Archived ' + data.name; */
-			
-            wArchived.data = [];
+			wArchived.data = [];
             wArchived.data.push([]);
             wArchived.data[0] = columnHeadings;
             
@@ -237,7 +217,6 @@ function createExcelExport() {
 					datetimeDone ;
 				
 				//Trello Plus Spent/Estimate
-				//TODO: fix!!!
 				var spentData = title.match(SpentEstRegex);
 				if(spentData!=null)
 				{
@@ -300,7 +279,6 @@ function createExcelExport() {
                     				
 					//parse checklists
 //					console.log('parse ' + checklists.length + ' checklists for this card');
-					//var checkListsText='';
 					$.each(checklists, function(i, checklistid){
 					//console.log('PARSE ' + checklistid);
 						 $.each(data.checklists, function (key, list) {
@@ -317,12 +295,9 @@ function createExcelExport() {
 										checkListsText += ' - ' + item.name + ' (' + item.state + ')\n';
 									}
 								});
-								
 								//checkListsText += '\n';
-							}
-						
+							}						
 						});
-						
 					});
 
 					//comments

@@ -18,6 +18,12 @@ This is a fork of the original TrelloExport extension, available at [https://git
 8. use updated version of jquery, 2.1.0
 9. use usernames instead of initials for members
 
+###Version 1.9.1
+Whatsnew for version 1.9.1:
+
+- fixed button loading
+- some code cleaning
+
 ###Version 1.9.0
 Whatsnew for version 1.9.0
 

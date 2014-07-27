@@ -26,6 +26,9 @@
 * Whatsnew for version 1.9.1:
     - fixed button loading
     - some code cleaning
+* Whatsnew for version 1.9.2:
+    - fixed blocking error when duedate specified
+    - new button loading function
  */
  var $,
     byteString,
@@ -41,22 +44,13 @@
 // Variables
 var $excel_btn,
     columnHeadings = ['List', 'Card #', 'Title', 'Link', 'Description', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Created', 'CreatedBy', 'Due', 'Done', 'DoneBy', 'Members', 'Labels'],
-	commentLimit = 100; // limit the number of comments to put in the spreadsheet
+	commentLimit = 100, // limit the number of comments to put in the spreadsheet
+    loaded=false;
 	
 window.URL = window.webkitURL || window.URL;
 
-// on DOM load
-$(function () {
-    console.log('TrelloExport 1.9.1 available');
-    //1.9.1: fix button loading
-    
-    // Look for clicks on the .js-share class, which is
-    // the "Share, Print, Export..." link on the board header option list
-    $('.js-share').on('mouseup', function () {
-        setTimeout(function(){addExportLink();}, 500);
-    });  
-});
-
+//console.log('TrelloExport 1.9.2');
+   
 function sheet_from_array_of_arrays(data, opts) {
 	var ws = {};
 	var range = {s: {c:10000000, r:10000000}, e: {c:0, r:0 }};
@@ -141,27 +135,6 @@ function getMoveCardAction(idCard, nameList) {
     .OrderByDescending(function(x){return x.date;})
     .ToArray();
   return query.length > 0 ? query[0] : false;
-}
-
-// Add a Export Excel button to the DOM and trigger export if clicked
-function addExportLink() { 
-    var $js_btn = $('a.js-export-json'); // Export JSON link
-    
-    // See if our Export Excel is already there
-    if ($('form').find('.js-export-excel').length) return;
-
-    // The new link/button
-    if ($js_btn.length) $excel_btn = $('<a>')
-        .attr({
-        class: 'js-export-excel',
-        href: '#',
-        target: '_blank',
-        title: 'Open downloaded file with Excel'
-    })
-        .text('Export Excel')
-        .click(createExcelExport)
-        .insertAfter($js_btn.parent())
-        .wrap(document.createElement("li"));
 }
 
 function createExcelExport() {
@@ -342,13 +315,7 @@ function createExcelExport() {
 							 attachmentsText += '[' + attach.name + '] (' + attach.bytes + ') ' + attach.url + '\n';
 						});
 					}
-					 
-                    // Need to set dates to the Date type so xlsx.js sets the right datatype
-                    if (due !== '' ){
-                        var d = new Date(due);
-                        due = d;
-                    }
-                    
+					
 					//pulled from https://github.com/bmccormack/export-for-trello/blob/5b2b8b102b98ed2c49241105cb9e00e44d4e1e86/trelloexport.js
 					//Get member created and DateTime created
                     var query = Enumerable.From(data.actions)

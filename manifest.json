@@ -1,6 +1,6 @@
 {
 	"name": "TrelloExport",
-	"version": "1.9.1",
+	"version": "1.9.2",
 	"manifest_version" : 2,
 	
 	"description": "Export Trello Boards to Excel",
@@ -14,6 +14,7 @@
                    "lib/js-xlsx/jszip.js",
 				   "lib/js-xlsx/xlsx.full.min.js",
 				   "lib/linq.min.js",
+                   "lib/injectTrelloExporter.js",
 		           "trelloexport.js"]
 		}
 	]

@@ -47,12 +47,13 @@ window.URL = window.webkitURL || window.URL;
 
 // on DOM load
 $(function () {
+    console.log('TrelloExport 1.9.1 available');
     //1.9.1: fix button loading
+    
     // Look for clicks on the .js-share class, which is
     // the "Share, Print, Export..." link on the board header option list
     $('.js-share').on('mouseup', function () {
-        console.log('js-share');
-        setTimeout(function(){addExportLink();}, 300);
+        setTimeout(function(){addExportLink();}, 500);
     });  
 });
 
@@ -148,7 +149,7 @@ function addExportLink() {
     
     // See if our Export Excel is already there
     if ($('form').find('.js-export-excel').length) return;
-    
+
     // The new link/button
     if ($js_btn.length) $excel_btn = $('<a>')
         .attr({

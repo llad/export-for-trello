@@ -18,6 +18,13 @@ This is a fork of the original TrelloExport extension, available at [https://git
 8. use updated version of jquery, 2.1.0
 9. use usernames instead of initials for members
 
+###Version 1.9.0
+Whatsnew for version 1.9.0
+
+- switched to SheetJS library to export to excel, cfr [https://github.com/SheetJS/js-xlsx](https://github.com/SheetJS/js-xlsx "https://github.com/SheetJS/js-xlsx")
+- unicode characters are now correctly exported to xlsx
+
+
 ###Version 1.8.9
 Whatsnew for version 1.8.9:
 

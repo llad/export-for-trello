@@ -1,4 +1,4 @@
-/*!
+/*
  * TrelloExport
  * https://github.com/llad/trelloExport
  *
@@ -19,6 +19,9 @@
 	- added column Card #
 	- added columns memberCreator, datetimeCreated, datetimeDone and memberDone pulling modifications from https://github.com/bmccormack/export-for-trello/blob/5b2b8b102b98ed2c49241105cb9e00e44d4e1e86/trelloexport.js
 	- added linq.min.js library to support linq queries for the above modifications
+* Whatsnew for version 1.9.0:
+	- switched to SheetJS library to export to excel, cfr https://github.com/SheetJS/js-xlsx
+	- unicode characters are now correctly exported
  */
 
  var $,
@@ -61,6 +64,48 @@ $(function () {
    });
    
 });
+
+function sheet_from_array_of_arrays(data, opts) {
+	var ws = {};
+	var range = {s: {c:10000000, r:10000000}, e: {c:0, r:0 }};
+	for(var R = 0; R != data.length; ++R) {
+		for(var C = 0; C != data[R].length; ++C) {
+			if(range.s.r > R) range.s.r = R;
+			if(range.s.c > C) range.s.c = C;
+			if(range.e.r < R) range.e.r = R;
+			if(range.e.c < C) range.e.c = C;
+			var cell = {v: data[R][C] };
+			if(cell.v == null) continue;
+			var cell_ref = XLSX.utils.encode_cell({c:C,r:R});
+			
+			if(typeof cell.v === 'number') cell.t = 'n';
+			else if(typeof cell.v === 'boolean') cell.t = 'b';
+			else if(cell.v instanceof Date) {
+				cell.t = 'n'; cell.z = XLSX.SSF._table[14];
+				cell.v = datenum(cell.v);
+			}
+			else cell.t = 's';
+			
+			ws[cell_ref] = cell;
+		}
+	}
+	if(range.s.c < 10000000) ws['!ref'] = XLSX.utils.encode_range(range);
+	return ws;
+}
+
+function Workbook() {
+	if(!(this instanceof Workbook)) return new Workbook();
+	this.SheetNames = [];
+	this.Sheets = {};
+}
+
+
+function s2ab(s) {
+	var buf = new ArrayBuffer(s.length);
+	var view = new Uint8Array(buf);
+	for (var i=0; i!=s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+	return buf;
+}
 
 if (typeof String.prototype.startsWith != 'function') {
   // see below for better implementation!
@@ -135,23 +180,14 @@ function createExcelExport() {
 	
 	console.log('Start export...');
 	
-	//var dlg = "<div id=\"dialog\" title=\"Basic dialog\"><p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the 'x' icon.</p></div>";
-	//$(dlg).dialog();
 	
     $.getJSON($('a.js-export-json').attr('href'), function (data) {
 	
 		idBoard = data.id;
-        var file = {
-            worksheets: [[],[]], // worksheets has one empty worksheet (array)
-            creator: 'TrelloExport',
-            created: new Date(),
-            lastModifiedBy: 'TrelloExport',
-            modified: new Date(),
-            activeWorksheet: 0
-            },
-            
-            // Setup the active list and cart worksheet
-            w = file.worksheets[0]; 
+		
+        // Setup the active list and cart worksheet
+		w=new Object();
+		
 			if(data.name.length>30)
 				w.name = data.name.substr(0,30);
 			else
@@ -162,7 +198,8 @@ function createExcelExport() {
             
             
             // Setup the archive list and cart worksheet            
-            wArchived = file.worksheets[1]; 
+//            wArchived = file.worksheets[1]; 
+		wArchived=new Object();
 			wArchived.name = 'Archived cards';
 			/* if(data.name.length>11)
 				wArchived.name = 'Archived ' + data.name.substr(0,11);
@@ -204,11 +241,6 @@ function createExcelExport() {
 				var spentData = title.match(SpentEstRegex);
 				if(spentData!=null)
 				{
-					/* console.log('spentData=' + spentData);
-					console.log('spentData[1]=' + spentData[1]);
-					console.log('spentData[2]=' + spentData[2]);
-					console.log('spentData[3]=' + spentData[3]);
-					console.log('spentData[4]=' + spentData[3]); */
 					spent = spentData[1];
 					estimate = spentData[3];
 					
@@ -267,7 +299,7 @@ function createExcelExport() {
                     });
                     				
 					//parse checklists
-					console.log('parse ' + checklists.length + ' checklists for this card');
+//					console.log('parse ' + checklists.length + ' checklists for this card');
 					//var checkListsText='';
 					$.each(checklists, function(i, checklistid){
 					//console.log('PARSE ' + checklistid);
@@ -299,7 +331,7 @@ function createExcelExport() {
 						//Date.js parsing, in progress
 						//var shortDate = Date.CultureInfo.formatPatterns.shortDate;
 
-						console.log('parse ' + data.actions.length + ' comments for this card');
+//						console.log('parse ' + data.actions.length + ' actions for this card');
 						$.each(data.actions, function(j, action){  
 						
 							 if(action.type == "commentCard" && commentCounter <= commentLimit){
@@ -311,7 +343,8 @@ function createExcelExport() {
 								
 								//console.log('sActionDate ' + sActionDate);
 								//var sdate = Date.parse(sActionDate);
-								
+//								console.log('action.data.text=' + action.data.text);
+									
 								if(action.memberCreator)
 								{
 									commentsText += '[' + sActionDate + ' - ' + action.memberCreator.username + '] ' + action.data.text + "\n";
@@ -328,7 +361,7 @@ function createExcelExport() {
 					
 					if(card.attachments)
 					{
-						console.log('parse ' + card.attachments.length + ' attachments for this card');
+//						console.log('parse ' + card.attachments.length + ' attachments for this card');
 						$.each(card.attachments, function(j, attach){  
 							 attachmentsText += '[' + attach.name + '] (' + attach.bytes + ') ' + attach.url + '\n';
 						});
@@ -421,26 +454,15 @@ function createExcelExport() {
         });
         
 		console.log('Prepare xlsx...');
+		var board_title = data.name;
+		var wb = new Workbook(), ws = sheet_from_array_of_arrays(w.data);
+		/* add worksheet to workbook */
+		wb.SheetNames.push(board_title);
+		wb.Sheets[board_title] = ws;
+		var wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
+		saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), board_title + ".xlsx")
 		
-        // We want just the base64 part of the output of xlsx.js
-        // since we are not leveraging they standard transfer process.
-        byteString = window.atob(xlsx(file).base64);
-        var buffer = new ArrayBuffer(byteString.length);
-        var ia = new Uint8Array(buffer);
-        
-        // write the bytes of the string to an ArrayBuffer
-        for (var i = 0; i < byteString.length; i++) {
-            ia[i] = byteString.charCodeAt(i);
-        }
-        
-        // create blob and save it using FileSaver.js
-        var blob = new Blob([ia], {
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        });
-        var board_title = data.name;
-		
-        saveAs(blob, board_title + '.xlsx');
-        $("a.close-btn")[0].click();
+		$("a.close-btn")[0].click();
 
 		console.log('Done exporting ' + board_title + '.xlsx');
 

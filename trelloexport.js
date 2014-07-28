@@ -29,6 +29,8 @@
 * Whatsnew for version 1.9.2:
     - fixed blocking error when duedate specified
     - new button loading function
+* Whatsnew for version 1.9.3:
+	- restored archived cards sheet
  */
  var $,
     byteString,
@@ -49,7 +51,7 @@ var $excel_btn,
 	
 window.URL = window.webkitURL || window.URL;
 
-//console.log('TrelloExport 1.9.2');
+//console.log('TrelloExport 1.9.3');
    
 function sheet_from_array_of_arrays(data, opts) {
 	var ws = {};
@@ -398,10 +400,13 @@ function createExcelExport() {
         
 		console.log('Prepare xlsx...');
 		var board_title = data.name;
-		var wb = new Workbook(), ws = sheet_from_array_of_arrays(w.data);
+		var wb = new Workbook(), ws = sheet_from_array_of_arrays(w.data), wsArchived =  sheet_from_array_of_arrays(wArchived.data);
 		/* add worksheet to workbook */
 		wb.SheetNames.push(board_title);
 		wb.Sheets[board_title] = ws;
+		wb.SheetNames.push("Archived");
+		wb.Sheets["Archived"] = wsArchived;
+		
 		var wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
 		saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), board_title + ".xlsx")
 		

@@ -18,6 +18,10 @@ This is a fork of the original TrelloExport extension, available at [https://git
 8. use updated version of jquery, 2.1.0
 9. use usernames instead of initials for members
 
+###Version 1.9.3
+Whatsnew for version 1.9.3:
+
+- restored archived cards sheet
 
 ###Version 1.9.2
 Whatsnew for version 1.9.2:

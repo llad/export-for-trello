@@ -31,6 +31,8 @@
     - new button loading function
 * Whatsnew for version 1.9.3:
 	- restored archived cards sheet
+* Whatsnew for version 1.9.4:
+	- fix exporting when there are no archived cards
  */
  var $,
     byteString,
@@ -404,8 +406,13 @@ function createExcelExport() {
 		/* add worksheet to workbook */
 		wb.SheetNames.push(board_title);
 		wb.Sheets[board_title] = ws;
-		wb.SheetNames.push("Archived");
-		wb.Sheets["Archived"] = wsArchived;
+		
+		if(wArchived!=undefined)
+		{
+			wsArchived =  sheet_from_array_of_arrays(wArchived.data);
+			 wb.SheetNames.push("Archived");
+			wb.Sheets["Archived"] = wsArchived;
+		}
 		
 		var wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
 		saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), board_title + ".xlsx")

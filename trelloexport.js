@@ -25,13 +25,18 @@ var $excel_btn,
 
 window.URL = window.webkitURL || window.URL;
 
-function createExcelExport() {
+function createExcelExport(json_href) {
     "use strict";
     // RegEx to find the points for users of TrelloScrum
     var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
 
-    $.getJSON($('a.js-export-json').attr('href'), function (data) {
-            
+    var json_endpoint = $('a.js-export-json').attr('href')
+    if (!json_endpoint) {
+      json_endpoint = json_href;
+    }
+
+    $.getJSON(json_endpoint, function (data) {
+
         var file = {
             worksheets: [[], []], // worksheets has one empty worksheet (array)
             creator: 'TrelloExport',
@@ -40,7 +45,7 @@ function createExcelExport() {
             modified: new Date(),
             activeWorksheet: 0
         },
-            
+
             // Setup the active list and cart worksheet
             w = file.worksheets[0],
             wArchived = file.worksheets[1],
@@ -49,29 +54,29 @@ function createExcelExport() {
             ia,
             blob,
             board_title;
-        
+
         w.name = data.name.substring(0, 22);  // Over 22 chars causes Excel error, don't know why
         w.data = [];
         w.data.push([]);
         w.data[0] = columnHeadings;
-            
-            
-        // Setup the archive list and cart worksheet            
+
+
+        // Setup the archive list and cart worksheet
         wArchived.name = 'Archived ' + data.name.substring(0, 22);
         wArchived.data = [];
         wArchived.data.push([]);
         wArchived.data[0] = columnHeadings;
-        
-        // This iterates through each list and builds the dataset                     
+
+        // This iterates through each list and builds the dataset
         $.each(data.lists, function (key, list) {
             var list_id = list.id,
                 listName = list.name;
-            
+
             // tag archived lists
             if (list.closed) {
                 listName = '[archived] ' + listName;
             }
-            
+
             // Iterate through each card and transform data as needed
             $.each(data.cards, function (i, card) {
                 if (card.idList === list_id) {
@@ -86,14 +91,14 @@ function createExcelExport() {
                         rowData = [],
                         rArch,
                         r;
-                    
+
                     title = title.replace(pointReg, '');
-                    
+
                     // tag archived cards
                     if (card.closed) {
                         title = '[archived] ' + title;
                     }
-                    
+
                     memberIDs = card.idMembers;
                     $.each(memberIDs, function (i, memberID) {
                         $.each(data.members, function (key, member) {
@@ -102,7 +107,7 @@ function createExcelExport() {
                             }
                         });
                     });
-                    
+
                     //Get all labels
                     $.each(card.labels, function (i, label) {
                         if (label.name) {
@@ -110,14 +115,14 @@ function createExcelExport() {
                         } else {
                             labels.push(label.color);
                         }
-    
+
                     });
-                    
+
                     // Need to set dates to the Date type so xlsx.js sets the right datatype
                     if (due !== '') {
                         due = d;
                     }
-                    
+
                     rowData = [
                         listName,
                         title,
@@ -129,13 +134,13 @@ function createExcelExport() {
                         card.idShort,
 						card.shortUrl
                     ];
-                
+
                     // Writes all closed items to the Archived tab
                     // Note: Trello allows open cards on closed lists
                     if (list.closed || card.closed) {
                         rArch = wArchived.data.push([]) - 1;
                         wArchived.data[rArch] = rowData;
-                                                                                
+
                     } else {
                         r = w.data.push([]) - 1;
                         w.data[r] = rowData;
@@ -143,18 +148,18 @@ function createExcelExport() {
                 }
             });
         });
-        
+
         // We want just the base64 part of the output of xlsx.js
         // since we are not leveraging they standard transfer process.
         byteString = window.atob(xlsx(file).base64);
         buffer = new ArrayBuffer(byteString.length);
         ia = new Uint8Array(buffer);
-        
+
         // write the bytes of the string to an ArrayBuffer
         for (i = 0; i < byteString.length; i += 1) {
             ia[i] = byteString.charCodeAt(i);
         }
-        
+
         // create blob and save it using FileSaver.js
         blob = new Blob([ia], {
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -173,15 +178,15 @@ function createExcelExport() {
 function addExportLink() {
     "use strict";
     //alert('add');
-   
+
     var $js_btn = $('a.js-export-json'); // Export JSON link
-    
+
     // See if our Export Excel is already there
     if ($('.pop-over-list').find('.js-export-excel').length) {
         clearInterval(addInterval);
         return;
     }
-    
+
     // The new link/button
     if ($js_btn.length) {
         $excel_btn = $('<a>')
@@ -195,7 +200,7 @@ function addExportLink() {
             .click(createExcelExport)
             .insertAfter($js_btn.parent())
             .wrap(document.createElement("li"));
-    
+
     }
 }
 
@@ -207,5 +212,25 @@ $(function () {
     // the "Share, Print, Export..." link on the board header option list
     $(document).on('mouseup', ".js-share", function () {
         addInterval = setInterval(addExportLink, 500);
+    });
+
+    var styles = [
+      "position: absolute",
+      "right: 5px",
+      "bottom: 5px"
+    ]
+    var $print_link = $('<div style="' + styles.join(";") + '" title="Export to Excel"><img src="' + chrome.extension.getURL('icons/xlsx.png') + '" /></div>').appendTo('.js-open-board')
+    $print_link.on('click', function (e) {
+      e.preventDefault();
+
+      var $target = $(this)
+      var href = $target.parent().attr('href')
+
+      var href_data = href.split("/")
+      href_data.pop()
+      href = href_data.join("/") + ".json"
+
+      createExcelExport(href)
+      return false;
     });
 });

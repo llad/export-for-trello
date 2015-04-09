@@ -33,6 +33,9 @@
 	- restored archived cards sheet
 * Whatsnew for version 1.9.4:
 	- fix exporting when there are no archived cards
+* Whatsnew for version 1.9.5:
+	- code lint
+	- ignore case in finding 'Done' lists (thanks https://disqus.com/by/AlvonsiusAlbertNainupu/)
  */
  var $,
     byteString,
@@ -48,7 +51,7 @@
 // Variables
 var $excel_btn,
     columnHeadings = ['List', 'Card #', 'Title', 'Link', 'Description', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Created', 'CreatedBy', 'Due', 'Done', 'DoneBy', 'Members', 'Labels'],
-	commentLimit = 100, // limit the number of comments to put in the spreadsheet
+	commentLimit = 1000, // limit the number of comments to put in the spreadsheet
     loaded=false;
 	
 window.URL = window.webkitURL || window.URL;
@@ -65,7 +68,7 @@ function sheet_from_array_of_arrays(data, opts) {
 			if(range.e.r < R) range.e.r = R;
 			if(range.e.c < C) range.e.c = C;
 			var cell = {v: data[R][C] };
-			if(cell.v == null) continue;
+			if(cell.v === null) continue;
 			var cell_ref = XLSX.utils.encode_cell({c:C,r:R});
 			
 			if(typeof cell.v === 'number') cell.t = 'n';
@@ -100,7 +103,7 @@ if (typeof String.prototype.startsWith != 'function') {
   // see below for better implementation!
   String.prototype.startsWith = function (str){
   //console.log(this + (this.indexOf(str) == 0 ? ' STARTSWITH' : '' + ' DOESNOTSTARTWITH') + ' ' + str);
-    return this.indexOf(str) == 0;
+    return this.indexOf(str) === 0;
   };
 }
 
@@ -117,7 +120,7 @@ function getCreateCardAction(idCard) {
     });
   }
   var query = Enumerable.From(actionsCreateCard)
-    .Where(function(x){if(x.data.card){return x.data.card.id == idCard}})
+    .Where(function(x){if(x.data.card){return x.data.card.id == idCard;}})
     .ToArray();
   return query.length > 0 ? query[0] : false;
 }
@@ -135,7 +138,7 @@ function getMoveCardAction(idCard, nameList) {
     });
   }
   var query = Enumerable.From(actionsMoveCard)
-    .Where(function(x){if(x.data.card && x.data.listAfter){return x.data.card.id == idCard && x.data.listAfter.name == nameList}})
+    .Where(function(x){if(x.data.card && x.data.listAfter){return x.data.card.id == idCard && x.data.listAfter.name == nameList;}})
     .OrderByDescending(function(x){return x.date;})
     .ToArray();
   return query.length > 0 ? query[0] : false;
@@ -152,7 +155,7 @@ function createExcelExport() {
 		    idBoard = data.id;
 		
             // Setup the active list and cart worksheet
-            w=new Object();
+            w={}; //new Object();
 			if(data.name.length>30)
 				w.name = data.name.substr(0,30);
 			else
@@ -162,7 +165,7 @@ function createExcelExport() {
             w.data[0] = columnHeadings;
             
             // Setup the archive list and cart worksheet            
-		    wArchived=new Object();
+		    wArchived={}; //new Object();
 			wArchived.name = 'Archived cards';
 			wArchived.data = [];
             wArchived.data.push([]);
@@ -196,13 +199,13 @@ function createExcelExport() {
 				
 				//Trello Plus Spent/Estimate
 				var spentData = title.match(SpentEstRegex);
-				if(spentData!=null)
+				if(spentData!==null)
 				{
 					spent = spentData[1];
 					estimate = spentData[3];
 					
-					if(spent==undefined) spent=0;
-					if(estimate==undefined) estimate=0;
+					if(spent===undefined) spent=0;
+					if(estimate===undefined) estimate=0;
 					
 					//console.log('SPENT ' + spent + ' / estimate ' + estimate);
 				}
@@ -311,6 +314,8 @@ function createExcelExport() {
 							} 
 						});
 					}
+
+					console.log('Found ' + commentCounter + ' comments');
 					
 					if(card.attachments)
 					{
@@ -323,7 +328,7 @@ function createExcelExport() {
 					//pulled from https://github.com/bmccormack/export-for-trello/blob/5b2b8b102b98ed2c49241105cb9e00e44d4e1e86/trelloexport.js
 					//Get member created and DateTime created
                     var query = Enumerable.From(data.actions)
-                      .Where(function(x){if(x.data.card){return x.data.card.id == card.id && x.type=="createCard"}})
+                      .Where(function(x){if(x.data.card){return x.data.card.id == card.id && x.type=="createCard";}})
                       .ToArray();
                     if (query.length > 0){
                       memberCreator = query[0].memberCreator.fullName + ' (' + query[0].memberCreator.username + ')';
@@ -342,10 +347,10 @@ function createExcelExport() {
                       }
                     }
 					
-					 //Find out when the card was most recently moved to any list whose name starts with "Done"
+					 //Find out when the card was most recently moved to any list whose name starts with "Done" (ignore case, e.g. 'done' or 'DONE' or 'DoNe')
                     var nameListDone = "Done";
-                    var query = Enumerable.From(data.actions)
-                      .Where(function(x){if (x.data.card && x.data.listAfter){var listAfterName = x.data.listAfter.name; return x.data.card.id == card.id && listAfterName.startsWith(nameListDone);}})
+                    query = Enumerable.From(data.actions)
+                      .Where(function(x){if (x.data.card && x.data.listAfter){var listAfterName = x.data.listAfter.name; return x.data.card.id == card.id && listAfterName.toLowerCase().startsWith(nameListDone.toLowerCase());}})
                       .OrderByDescending(function(x){return x.date;})
                       .ToArray();
                     if (query.length > 0){
@@ -407,15 +412,15 @@ function createExcelExport() {
 		wb.SheetNames.push(board_title);
 		wb.Sheets[board_title] = ws;
 		
-		if(wArchived!=undefined)
+		if(wArchived!==undefined)
 		{
 			wsArchived =  sheet_from_array_of_arrays(wArchived.data);
 			 wb.SheetNames.push("Archived");
-			wb.Sheets["Archived"] = wsArchived;
+			wb.Sheets.Archived = wsArchived; // ["Archived"] 
 		}
 		
 		var wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
-		saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), board_title + ".xlsx")
+		saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), board_title + ".xlsx");
 		
 		$("a.close-btn")[0].click();
 

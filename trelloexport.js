@@ -19,33 +19,42 @@ var $,
 
 
 // Variables
-var $excel_btn,
-    addInterval,
+var addInterval,
     columnHeadings = ['List', 'Title', 'Description', 'Points', 'Due', 'Members', 'Labels', 'Card #', 'Card URL'];
 
-window.URL = window.webkitURL || window.URL;
-
-function createExcelExport() {
+function createExcelExport(event) {
     "use strict";
+
+    var p_archived = event.data.p_archived;
+
     // RegEx to find the points for users of TrelloScrum
     var pointReg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m;
 
 	var boardExportURL = $('a.js-export-json').attr('href');
-	//RegEx to extract Board ID
+
+    //RegEx to extract Board ID
 	var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL);
 
-	if(!parts) {
+	if (!parts) {
 		alert("Board menu not open.");
 		return;
 	}
 
 	var idBoard = parts[1];
-	var apiURL = "https://trello.com/1/boards/" + idBoard + "?lists=all&cards=all&card_attachments=cover&card_stickers=true&card_fields=badges%2Cclosed%2CdateLastActivity%2Cdesc%2CdescData%2Cdue%2CidAttachmentCover%2CidList%2CidBoard%2CidMembers%2CidShort%2Clabels%2CidLabels%2Cname%2Cpos%2CshortUrl%2CshortLink%2Csubscribed%2Curl&card_checklists=none&members=all&member_fields=fullName%2Cinitials%2CmemberType%2Cusername%2CavatarHash%2Cbio%2CbioData%2Cconfirmed%2Cproducts%2Curl%2Cstatus&membersInvited=all&membersInvited_fields=fullName%2Cinitials%2CmemberType%2Cusername%2CavatarHash%2Cbio%2CbioData%2Cconfirmed%2Cproducts%2Curl&checklists=none&organization=true&organization_fields=name%2CdisplayName%2Cdesc%2CdescData%2Curl%2Cwebsite%2Cprefs%2Cmemberships%2ClogoHash%2Cproducts&myPrefs=true&fields=name%2Cclosed%2CdateLastActivity%2CdateLastView%2CidOrganization%2Cprefs%2CshortLink%2CshortUrl%2Curl%2Cdesc%2CdescData%2Cinvitations%2Cinvited%2ClabelNames%2Cmemberships%2Cpinned%2CpowerUps%2Csubscribed";
+
+    // set whether we get archived stuff or not
+    var archive_query = "?lists=all&cards=all";
+
+    if (!p_archived) {
+        archive_query = "?lists=open&cards=visible";
+    }
+
+	var apiURL = "https://trello.com/1/boards/" + idBoard + archive_query + "&card_attachments=cover&card_stickers=true&card_fields=badges%2Cclosed%2CdateLastActivity%2Cdesc%2CdescData%2Cdue%2CidAttachmentCover%2CidList%2CidBoard%2CidMembers%2CidShort%2Clabels%2CidLabels%2Cname%2Cpos%2CshortUrl%2CshortLink%2Csubscribed%2Curl&card_checklists=none&members=all&member_fields=fullName%2Cinitials%2CmemberType%2Cusername%2CavatarHash%2Cbio%2CbioData%2Cconfirmed%2Cproducts%2Curl%2Cstatus&membersInvited=all&membersInvited_fields=fullName%2Cinitials%2CmemberType%2Cusername%2CavatarHash%2Cbio%2CbioData%2Cconfirmed%2Cproducts%2Curl&checklists=none&organization=true&organization_fields=name%2CdisplayName%2Cdesc%2CdescData%2Curl%2Cwebsite%2Cprefs%2Cmemberships%2ClogoHash%2Cproducts&myPrefs=true&fields=name%2Cclosed%2CdateLastActivity%2CdateLastView%2CidOrganization%2Cprefs%2CshortLink%2CshortUrl%2Curl%2Cdesc%2CdescData%2Cinvitations%2Cinvited%2ClabelNames%2Cmemberships%2Cpinned%2CpowerUps%2Csubscribed";
 
     $.getJSON(apiURL, function (data) {
 
         var file = {
-            worksheets: [[], []], // worksheets has one empty worksheet (array)
+            worksheets: p_archived ? [[], []] : [[]],
             creator: 'TrelloExport',
             created: new Date(),
             lastModifiedBy: 'TrelloExport',
@@ -55,7 +64,7 @@ function createExcelExport() {
 
             // Setup the active list and cart worksheet
             w = file.worksheets[0],
-            wArchived = file.worksheets[1],
+            wArchived = p_archived ? file.worksheets[1] : null,
             buffer,
             i,
             ia,
@@ -68,11 +77,13 @@ function createExcelExport() {
         w.data[0] = columnHeadings;
 
 
-        // Setup the archive list and cart worksheet
-        wArchived.name = 'Archived ' + data.name.substring(0, 22);
-        wArchived.data = [];
-        wArchived.data.push([]);
-        wArchived.data[0] = columnHeadings;
+        // Setup the archive list and card worksheet
+        if (p_archived) {
+            wArchived.name = 'Archived ' + data.name.substring(0, 22);
+            wArchived.data = [];
+            wArchived.data.push([]);
+            wArchived.data[0] = columnHeadings;
+        }
 
         // This iterates through each list and builds the dataset
         $.each(data.lists, function (key, list) {
@@ -175,10 +186,10 @@ function createExcelExport() {
         saveAs(blob, board_title + '.xlsx');
         $("a.pop-over-header-close-btn")[0].click();
 
-
     });
 
 }
+
 
 
 // Add a Export Excel button to the DOM and trigger export if clicked
@@ -196,15 +207,27 @@ function addExportLink() {
 
     // The new link/button
     if ($js_btn.length) {
-        $excel_btn = $('<a>')
+        $('<a>')
             .attr({
                 'class': 'js-export-excel',
                 'href': '#',
                 'target': '_blank',
-                'title': 'Open downloaded file with Excel'
+                'title': 'Export the board data to Excel with archived lists and cards'
+            })
+            .text('Export Excel with Archived')
+            .click({p_archived: true}, createExcelExport)
+            .insertAfter($js_btn.parent())
+            .wrap(document.createElement("li"));
+
+        $('<a>')
+            .attr({
+                'class': 'js-export-excel',
+                'href': '#',
+                'target': '_blank',
+                'title': 'Export the board data to Excel'
             })
             .text('Export Excel')
-            .click(createExcelExport)
+            .click({p_archived: false}, createExcelExport)
             .insertAfter($js_btn.parent())
             .wrap(document.createElement("li"));
 

@@ -3,6 +3,8 @@ TrelloExport
 
 Chrome extension to export data from Trello to Excel. And more to come.
 
+TrelloExport now has its own Trello board, go to [https://trello.com/b/MBnwUMwM/trelloexport](https://trello.com/b/MBnwUMwM/trelloexport).
+
 ## Fork
 This is a fork of the original TrelloExport extension, available at [https://github.com/llad/export-for-trello](https://github.com/llad/export-for-trello).
 

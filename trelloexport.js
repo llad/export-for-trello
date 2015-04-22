@@ -1,13 +1,16 @@
 /*
  * TrelloExport
- * https://github.com/llad/trelloExport
  *
- * Credit:
- * Started from: https://github.com/Q42/TrelloScrum
+ * A Chrome extension for Trello, that allows to export boards to Excel spreadsheets. And more to come.
  * 
  * Forked by @trapias (Alberto Velo)
- * https://github.com/trapias/trelloExport
+ * 	https://github.com/trapias/trelloExport
+ * From:
+ * 	https://github.com/llad/trelloExport
+ * Started from:
+ * 	https://github.com/Q42/TrelloScrum
  *
+ * = = = VERSION HISTORY = = = 
  * Whatsnew for version 1.8.8:
 	- export Trello Plus Spent and Estimate data
 	- export checklists
@@ -36,6 +39,9 @@
 * Whatsnew for version 1.9.5:
 	- code lint
 	- ignore case in finding 'Done' lists (thanks https://disqus.com/by/AlvonsiusAlbertNainupu/)
+* Whatsnew for version 1.9.6:
+	- order checklist items by position (issue #4)
+	- minor code changes
  */
  var $,
     byteString,
@@ -54,10 +60,8 @@ var $excel_btn,
 	commentLimit = 1000, // limit the number of comments to put in the spreadsheet
     loaded=false;
 	
-window.URL = window.webkitURL || window.URL;
+// window.URL = window.webkitURL || window.URL;
 
-//console.log('TrelloExport 1.9.3');
-   
 function sheet_from_array_of_arrays(data, opts) {
 	var ws = {};
 	var range = {s: {c:10000000, r:10000000}, e: {c:0, r:0 }};
@@ -100,7 +104,6 @@ function s2ab(s) {
 }
 
 if (typeof String.prototype.startsWith != 'function') {
-  // see below for better implementation!
   String.prototype.startsWith = function (str){
   //console.log(this + (this.indexOf(str) == 0 ? ' STARTSWITH' : '' + ' DOESNOTSTARTWITH') + ' ' + str);
     return this.indexOf(str) === 0;
@@ -109,7 +112,8 @@ if (typeof String.prototype.startsWith != 'function') {
 
 function getCreateCardAction(idCard) {
   if (!actionsCreateCard){
-  //console.log('getCreateCardAction ' + 'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=1000');
+  // console.log('getCreateCardAction ' + 'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=1000');
+  // todo: make limit configurable
     $.ajax({
       url:'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=1000', 
       dataType:'json',
@@ -142,6 +146,15 @@ function getMoveCardAction(idCard, nameList) {
     .OrderByDescending(function(x){return x.date;})
     .ToArray();
   return query.length > 0 ? query[0] : false;
+}
+
+function TrelloExportOptions() {
+	console.log('TrelloExportOptions');
+
+	// todo: open config / options dialog, then launch
+	
+	return createExcelExport();
+	
 }
 
 function createExcelExport() {
@@ -232,8 +245,7 @@ function createExcelExport() {
                     $.each(memberIDs, function (i, memberID){
                         $.each(data.members, function (key, member) {
                             if (member.id == memberID) {
-                                //memberInitials.push(member.initials);
-								memberInitials.push(member.username);
+								memberInitials.push(member.fullName); // initials, username or fullName
                             }
                         });
                     });
@@ -259,7 +271,6 @@ function createExcelExport() {
                     });
                     				
 					//parse checklists
-//					console.log('parse ' + checklists.length + ' checklists for this card');
 					$.each(checklists, function(i, checklistid){
 					//console.log('PARSE ' + checklistid);
 						 $.each(data.checklists, function (key, list) {
@@ -267,12 +278,15 @@ function createExcelExport() {
 							//console.log('found ' + list_id);
 							if(list_id == checklistid)
 							{
-								//console.log('CHECKLIST ' + list.name);
 								checkListsText += list.name + ':\n';
-								//checkitems
-								$.each(list.checkItems, function (i, item){
+								//checkitems: reordered (issue #4 https://github.com/trapias/trelloExport/issues/4)
+								var orderedChecklists = Enumerable.From(list.checkItems)
+			                      .OrderBy(function(x){return x.pos;})
+			                      .ToArray();
+
+								$.each(orderedChecklists, function (i, item){
 									if (item) {
-										//console.log('item ' + item.name + ' in state ' + item.state);
+										// console.log('item ' + item.name + ' in state ' + item.state + ', POS ' + item.pos);
 										checkListsText += ' - ' + item.name + ' (' + item.state + ')\n';
 									}
 								});
@@ -422,7 +436,7 @@ function createExcelExport() {
 		var wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
 		saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), board_title + ".xlsx");
 		
-		$("a.close-btn")[0].click();
+		// $("a.close-btn")[0].click();
 
 		console.log('Done exporting ' + board_title + '.xlsx');
 

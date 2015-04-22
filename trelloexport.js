@@ -42,6 +42,8 @@
 * Whatsnew for version 1.9.6:
 	- order checklist items by position (issue #4)
 	- minor code changes
+* Whatsnew for version 1.9.7:
+	- fix issue #3 (copied comments missing in export)
  */
  var $,
     byteString,
@@ -304,7 +306,7 @@ function createExcelExport() {
 //						console.log('parse ' + data.actions.length + ' actions for this card');
 						$.each(data.actions, function(j, action){  
 						
-							 if(action.type == "commentCard" && commentCounter <= commentLimit){
+							 if((action.type == "commentCard" || action.type == 'copyCommentCard' ) && commentCounter <= commentLimit){
 								if(card.id == action.data.card.id){
 								commentCounter ++;
 								//2013-08-08T06:57:18 

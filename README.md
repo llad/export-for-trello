@@ -19,6 +19,12 @@ This is a fork of the original TrelloExport extension, available at [https://git
 8. use updated version of jquery, 2.1.0
 9. use usernames instead of initials for members
 
+### Version 1.9.8:
+Use Trello API to get data, thanks https://github.com/mjearhart and https://github.com/llad:
+
+- https://github.com/llad/export-for-trello/pull/20
+- https://github.com/mjearhart/export-for-trello/commit/2a07561fdcdfd696dee0988cbe414cfd8374b572
+
 ### Version 1.9.7:
 - fix issue #3 (copied comments missing in export)
 

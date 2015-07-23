@@ -50,6 +50,8 @@
 	- MAXCHARSPERCELL limit to avoid import errors in Excel (see https://support.office.com/en-nz/article/Excel-specifications-and-limits-16c69c74-3d6a-4aaf-ba35-e6eb276e8eaa)
 	- removed commentLimit, all comments are loaded (but attention to MAXCHARSPERCELL limit above, since comments go to a single cell)
 	- growl notifications with jquery-growl http://ksylvest.github.io/jquery-growl/
+* Whatsnew for version 1.9.10:
+	- adapt inject script to modified Trello layout
  */
  var $,
     byteString,

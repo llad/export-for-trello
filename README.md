@@ -8,7 +8,9 @@ TrelloExport now has its own Trello board, go to [https://trello.com/b/MBnwUMwM/
 ## Fork
 This is a fork of the original TrelloExport extension, available at [https://github.com/llad/export-for-trello](https://github.com/llad/export-for-trello).
 
-### Fork modifications
+### Initial Fork modifications
+This fork initially added the following modifications:
+
 1. export Trello Plus Spent and Estimate values, extracting values from card titles in format (S/E)
 2. export comments (with a default limit of 100, see commentLimit in script)
 3. export checklists and checklists' items
@@ -18,6 +20,15 @@ This is a fork of the original TrelloExport extension, available at [https://git
 7. use updated version of xlsx.js, modified by me (escapeXML)
 8. use updated version of jquery, 2.1.0
 9. use usernames instead of initials for members
+
+Other improvements have been added since then: see the version history below.
+
+### Version 1.9.11:
+
+- added a new Options dialog
+- export full board or choosen list(s) only
+- add who and when item was completed to checklist items as of [issue #5](https://github.com/trapias/trelloExport/issues/5)
+
 
 ### Version 1.9.10:
 

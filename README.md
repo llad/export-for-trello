@@ -29,6 +29,10 @@ Other improvements have been added since then: see the version history below.
 - export full board or choosen list(s) only
 - add who and when item was completed to checklist items as of [issue #5](https://github.com/trapias/trelloExport/issues/5)
 
+More info in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-11/).
+
+Your feedback is welcome, just comment on the blog, on the dedicated [Trello board](https://trello.com/b/MBnwUMwM/trelloexport) or open new issues.
+
 
 ### Version 1.9.10:
 

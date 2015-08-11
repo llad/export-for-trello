@@ -56,6 +56,8 @@
 	- options dialog
 	- export full board or choosen list(s) only
 	- add who and when item was completed to checklist items (issue #5 at GitHub)
+* Whatsnew for version 1.9.12:
+	- bugfix: the previously used BoardID was kept when navigating to another board
  */
  var $,
     byteString,
@@ -128,7 +130,6 @@ if (typeof String.prototype.startsWith != 'function') {
 function getCreateCardAction(idCard) {
   if (!actionsCreateCard){
   // console.log('getCreateCardAction ' + 'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=1000');
-  // todo: make limit configurable
     $.ajax({
       url:'https://trello.com/1/boards/' + idBoard + '/actions?filter=createCard&limit=' + dataLimit, 
       dataType:'json',
@@ -276,15 +277,13 @@ function TrelloExportOptions() {
 
 function getalllistsinboard() {
 
-	if(idBoard===0) {
-		var boardExportURL = $('a.js-export-json').attr('href');
-		var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
-		if(!parts) {
-			$.growl.error({  title: "TrelloExport", message: "Board menu not open?" });
-			return;
-		}
-		idBoard = parts[1];
+	var boardExportURL = $('a.js-export-json').attr('href');
+	var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
+	if(!parts) {
+		$.growl.error({  title: "TrelloExport", message: "Board menu not open?" });
+		return;
 	}
+	idBoard = parts[1];
 	var apiURL = "https://trello.com/1/boards/" + idBoard + "?lists=all&cards=none";
 	var sHtml = "";
 
@@ -322,15 +321,13 @@ function createExcelExport() {
 	/*
 		get data via Trello API instead of Board's json 
 	*/
-	if(idBoard===0) {
-		var boardExportURL = $('a.js-export-json').attr('href');
-		var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
-		if(!parts) {
-			$.growl.error({  title: "TrelloExport", message: "Board menu not open?" });
-			return;
-		}
-		idBoard = parts[1];
+	var boardExportURL = $('a.js-export-json').attr('href');
+	var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
+	if(!parts) {
+		$.growl.error({  title: "TrelloExport", message: "Board menu not open?" });
+		return;
 	}
+	idBoard = parts[1];
 
 	var apiURL = "https://trello.com/1/boards/" + idBoard + "?lists=all&cards=all&card_fields=all&card_checklists=all&members=all&member_fields=all&membersInvited=all&checklists=all&organization=true&organization_fields=all&fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&card_attachments=true";
 

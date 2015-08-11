@@ -23,6 +23,10 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below.
 
+### Version 1.9.12:
+Fixed a bug by which the previously used BoardID was kept when navigating to another board.
+
+
 ### Version 1.9.11:
 
 - added a new Options dialog

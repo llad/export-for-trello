@@ -3,7 +3,8 @@
 .ZebraDialog *:before  { -moz-box-sizing: content-box !important; -webkit-box-sizing: content-box !important; box-sizing: content-box !important }
 
 .ZebraDialog {
-    width: 450px;
+    /*width: 450px;*/
+    width: 650px;
     z-index: 1001;
     border: 1px solid #DEDEDE;
 }
@@ -144,4 +145,19 @@
 /* TrelloExport overrides */
 .ZebraDialog_Body input[type=text], input[type=password], input[type=email] {
     width: inherit;
+}
+
+/**
+ *  Options Dialog
+ */
+#optionslist, #optionslist tr, #optionslist tr td {
+    border: none;
+}
+
+#optionslist tr td:first-child {
+    width: 40%;
+}
+
+#optionslist tr td:last-child {
+    width: 60%;
 }

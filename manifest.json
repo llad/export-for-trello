@@ -1,6 +1,6 @@
 {
 	"name": "TrelloExport",
-	"version": "1.9.12",
+	"version": "1.9.13",
 	"manifest_version" : 2,
 	
 	"description": "Export Trello Boards to Excel",
@@ -19,6 +19,7 @@
 				   "lib/jquery.growl.js",
 				   "lib/zebra/zebra_dialog.js",
                    "lib/injectTrelloExporter.js",
+                   "lib/datediff.js",
 		           "trelloexport.js"]
 		}
 	]

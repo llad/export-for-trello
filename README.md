@@ -23,6 +23,18 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below.
 
+### Version 1.9.13:
+Some (interesting, hopefully!) improvements with this version:
+
+- new 'DoneTime' column holding card completion time in days, hours, minutes and seconds, formatted as per [ISO8601](https://en.wikipedia.org/wiki/ISO_8601)
+- name (prefix) of 'Done' lists is now configurable, default "Done"
+- larger options dialog to better show options
+- export multiple (selected) boards
+- export multiple (selected) cards in a list (i.e. export single cards)
+
+More info in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-13/). Give feeback!
+
+
 ### Version 1.9.12:
 Fixed a bug by which the previously used BoardID was kept when navigating to another board.
 

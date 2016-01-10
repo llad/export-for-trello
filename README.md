@@ -21,7 +21,25 @@ This fork initially added the following modifications:
 8. use updated version of jquery, 2.1.0
 9. use usernames instead of initials for members
 
-Other improvements have been added since then: see the version history below.
+Other improvements have been added since then: see the version history below (newer versions up).
+
+### Version 1.9.14
+Some bugfix and some new features.
+
+**Fixes**:
+
+- fixed card completion calculation when exporting multiple boards (fix getMoveCardAction and getCreateCardAction)
+- loading comments with a new function (getCommentCardActions), trying to fix issues with comments reported by some users; please give feedback
+
+**New features**:
+
+- formatting dates in user (browser) locale
+- added support for multiple 'Done' list names
+- added capability to optionally filter exported lists by name when exporting multiple boards
+
+Both the 'Done list name' and 'Filter lists by name' input boxes accept a comma-separated list of partial list names, i.e. just specify multiple names in the textbox like 'Done,Completed' (without apices). Lists will then be (case insensitively) matched when their name starts with one of these values.
+
+More info in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-14/). 
 
 ### Version 1.9.13:
 Some (interesting, hopefully!) improvements with this version:

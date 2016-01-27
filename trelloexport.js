@@ -70,6 +70,8 @@
      - added a new function (getCommentCardActions) to load comments with a dedicated query
      - format dates according to locale
      - new capability to filter exported lists by name when exporting multiple boards
+* Whatsnew for v. 1.9.15:
+    - finally fix comments and done calculation exporting: thanks @fepsch
  */
  var $,
     byteString,
@@ -154,7 +156,7 @@ function getCommentCardActions(boardID, idCard) {
         }
     }
     $.ajax({
-      url:'https://trello.com/1/boards/' + boardID + '/actions?filter=commentCard,copyCommentCard:idList&limit=' + dataLimit, 
+      url:'https://trello.com/1/boards/' + boardID + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit, 
       dataType:'json',
       async: false,
       success: function(actionsData) {
@@ -226,7 +228,7 @@ function getMoveCardAction(boardID, idCard, nameList) {
         }
     }
     $.ajax({
-      url:'https://trello.com/1/boards/' + boardID + '/actions?filter=updateCard:idList&limit=' + dataLimit, 
+      url:'https://trello.com/1/boards/' + boardID + '/actions?filter=updateCard&limit=' + dataLimit, 
       dataType:'json',
       async: false,
       success: function(actionsData) {

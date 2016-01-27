@@ -23,6 +23,9 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below (newer versions up).
 
+### Version 1.9.15
+Finally fixing comments export: should have finally fixed exporting of comments and 'done time' calculations: thanks @fepsch for sharing a board and allowing to identify this annoying bug.
+
 ### Version 1.9.14
 Some bugfix and some new features.
 

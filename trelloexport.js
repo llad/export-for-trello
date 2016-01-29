@@ -72,6 +72,9 @@
      - new capability to filter exported lists by name when exporting multiple boards
 * Whatsnew for v. 1.9.15:
     - finally fix comments and done calculation exporting: thanks @fepsch
+* Whatsnew for v. 1.9.16:
+    - new icon
+    - investigating issues reported by @fepsch
  */
  var $,
     byteString,
@@ -262,7 +265,7 @@ function searchupdateCheckItemStateOnCardAction(checkitemid, actions) {
                 var d = new Date(action.date);
                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString(); // .substr(0,10) + ' ' + action.date.substr(11,8);
                 sOut = '[completed ' + sActionDate + ' by ' + action.memberCreator.fullName + ']';
-                console.log('checkitemid ' + checkitemid + '=' + sOut);
+                // console.log('checkitemid ' + checkitemid + '=' + sOut);
                 return sOut;
             }
         }
@@ -272,8 +275,9 @@ function searchupdateCheckItemStateOnCardAction(checkitemid, actions) {
 
 function TrelloExportOptions() {
 
-    exportboards=[];
-    exportlists=[]; // reset
+    exportboards=[]; // reset
+    exportlists=[]; 
+    exportcards=[];
     filterListsNames = [];
     nProcessedBoards = 0;
     nProcessedLists = 0;
@@ -454,7 +458,7 @@ function getalllistsinboard() {
         });
     })
     .fail(function() {
-        console.log("error");
+        console.log("getalllistsinboard error!!!");
     })
     .always(function() {
         // console.log("complete");
@@ -483,7 +487,7 @@ function getorganizationid() {
         orgID = data.idOrganization;
     })
     .fail(function() {
-        console.log("error");
+        console.log("getorganizationid error!!!");
     })
     .always(function() {
         // console.log("complete");
@@ -516,7 +520,7 @@ function getallboards() {
          }
     })
     .fail(function() {
-        console.log("error");
+        console.log("getallboards error!!!");
     })
     .always(function() {
         // console.log("complete");
@@ -547,7 +551,7 @@ function getallcardsinlist(listid) {
          }
     })
     .fail(function() {
-        console.log("error");
+        console.log("getallcardsinlist error!!!");
     })
     .always(function() {
         // console.log("complete");
@@ -820,7 +824,7 @@ function createExcelExport() {
                           // calculate datetimeCreated from card id
                           // cfr http://help.trello.com/article/759-getting-the-time-a-card-or-board-was-created
                           datetimeCreated = new Date(1000*parseInt(card.id.substring(0,8),16));
-                        memberCreator = "";
+                          memberCreator = "";
                       }
                     }
                     
@@ -923,7 +927,7 @@ function createExcelExport() {
         // console.log("Added sheet " + board_title);
         })
         .fail(function() {
-            console.log("error");
+            console.log("Error!!!");
         });
 
         // end loop boards

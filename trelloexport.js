@@ -75,6 +75,8 @@
 * Whatsnew for v. 1.9.16:
     - new icon
     - investigating issues reported by @fepsch
+* Whatsnew for v. 1.9.17:
+    - finally fix exporting ALL comments per card: now loading comments per single card, way slower but assures all comments are exported
  */
  var $,
     byteString,
@@ -150,7 +152,7 @@ if (typeof String.prototype.startsWith != 'function') {
 
 function getCommentCardActions(boardID, idCard) {
     for(var n=0; n<actionsCommentCard.length;n++) {
-        if(actionsCommentCard[n].board===boardID) {
+        if(actionsCommentCard[n].card===idCard) {
             var query = Enumerable.From(actionsCommentCard[n].data)
             .Where(function(x){if(x.data.card){return x.data.card.id == idCard;}})
             .OrderByDescending(function(x){return x.date;})
@@ -159,12 +161,13 @@ function getCommentCardActions(boardID, idCard) {
         }
     }
     $.ajax({
-      url:'https://trello.com/1/boards/' + boardID + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit, 
+        url:'https://trello.com/1/card/' + idCard + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit, 
+      // url:'https://trello.com/1/boards/' + boardID + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit, 
       dataType:'json',
       async: false,
       success: function(actionsData) {
           var a = {
-              board: boardID,
+              card: idCard,
               data:  actionsData,
           };
         actionsCommentCard.push(a);
@@ -173,7 +176,7 @@ function getCommentCardActions(boardID, idCard) {
       var selectedActions = null;
       // get the right actions for board
     for(var n=0; n<actionsCommentCard.length;n++) {
-        if(actionsCommentCard[n].board===boardID) {
+        if(actionsCommentCard[n].card===idCard) {
             selectedActions = actionsCommentCard[n].data;
             break;
         }
@@ -776,7 +779,7 @@ function createExcelExport() {
                     var commentsOnCard = getCommentCardActions(idBoard, card.id);
                     if(commentsOnCard)
                     {
-                        // console.log('parse ' + data.actions.length + ' actions for this card');
+                        // console.log('parse ' + commentsOnCard.length + ' comment actions for this card ' + JSON.stringify(commentsOnCard));
                         $.each(commentsOnCard, function(j, action) {
                              if((action.type == "commentCard" || action.type == 'copyCommentCard' )){
                                 if(card.id == action.data.card.id) {

@@ -23,6 +23,9 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below (newer versions up).
 
+### Version 1.9.17
+Finally fixed (really) exporting ALL comments per card. We're now loading comments per single card from Trello API, which is **much slower** but assures all comments are exported.
+
 ### Version 1.9.15
 Finally fixing comments export: should have finally fixed exporting of comments and 'done time' calculations: thanks @fepsch for sharing a board and allowing to identify this annoying bug.
 

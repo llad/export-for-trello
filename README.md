@@ -23,6 +23,15 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below (newer versions up).
 
+### Version 1.9.18
+Improving UI:
+
+    - improve UI: better feedback message timing, yet still blocking UI during export due to sync ajax requests
+    - removed data limit setting from options dialog - just use 1000, maximum allowed by Trello APIs
+    - fix filename (YYYYMMDDhhmmss)
+    - fix some UI issues
+
+
 ### Version 1.9.17
 Finally fixed (really) exporting ALL comments per card. We're now loading comments per single card from Trello API, which is **much slower** but assures all comments are exported.
 

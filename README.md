@@ -30,6 +30,8 @@ Partial refactoring: export flow has been rewritten to better handle data to ena
 - updated jQuery Growl to version 1.3.1
 - new Markdown export mode
 
+More info in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-19/). 
+
 ### Version 1.9.18
 Improving UI:
 
@@ -37,8 +39,6 @@ Improving UI:
 - removed data limit setting from options dialog - just use 1000, maximum allowed by Trello APIs
 - fix filename (YYYYMMDDhhmmss)
 - fix some UI issues
-
-More info in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-19/). 
 
 
 ### Version 1.9.17

@@ -23,13 +23,22 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below (newer versions up).
 
+### Version 1.9.19
+Partial refactoring: export flow has been rewritten to better handle data to enable different export modes. **It is now possible to export to Excel and Markdown**, and more export formats could now more easily be added.
+
+- refactoring export flow
+- updated jQuery Growl to version 1.3.1
+- new Markdown export mode
+
 ### Version 1.9.18
 Improving UI:
 
-    - improve UI: better feedback message timing, yet still blocking UI during export due to sync ajax requests
-    - removed data limit setting from options dialog - just use 1000, maximum allowed by Trello APIs
-    - fix filename (YYYYMMDDhhmmss)
-    - fix some UI issues
+- improve UI: better feedback message timing, yet still blocking UI during export due to sync ajax requests
+- removed data limit setting from options dialog - just use 1000, maximum allowed by Trello APIs
+- fix filename (YYYYMMDDhhmmss)
+- fix some UI issues
+
+More info in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-19/). 
 
 
 ### Version 1.9.17

@@ -30,7 +30,7 @@ Partial refactoring: export flow has been rewritten to better handle data to ena
 - updated jQuery Growl to version 1.3.1
 - new Markdown export mode
 
-More info in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-19/). 
+More info in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-19). 
 
 ### Version 1.9.18
 Improving UI:

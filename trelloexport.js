@@ -86,6 +86,8 @@
     - refactoring export flow
     - updated jQuery Growl to version 1.3.1
     - new markdown export mode
+* Whatsnew for v. 1.9.20:
+    - fixes due to Trello UI changes
  */
 
 /**
@@ -134,7 +136,7 @@ var $,
     actionsCreateCard = [],
     actionsMoveCard = [],
     actionsCommentCard = [],
-    idBoard = 0,
+    idBoard,
     nProcessedBoards = 0,
     nProcessedLists = 0,
     nProcessedCards = 0,
@@ -381,6 +383,18 @@ function TrelloExportOptions() {
     nProcessedBoards = 0;
     nProcessedLists = 0;
     nProcessedCards = 0;
+    var $js_btn = $('a.js-export-json'); // Export JSON link
+    var boardExportURL = $js_btn.attr('href');
+    var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
+    if (!parts) {
+        $.growl.error({
+            title: "TrelloExport",
+            message: "Board menu not open?",
+            fixed: true
+        });
+        return;
+    }
+    idBoard = parts[1];
 
     var sDialog = '<table id="optionslist">' +
         '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option></select></td>' +
@@ -551,18 +565,6 @@ function TrelloExportOptions() {
 }
 
 function getalllistsinboard() {
-
-    var boardExportURL = $('a.js-export-json').attr('href');
-    var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
-    if (!parts) {
-        $.growl.error({
-            title: "TrelloExport",
-            message: "Board menu not open?",
-            fixed: true
-        });
-        return;
-    }
-    idBoard = parts[1];
     var apiURL = "https://trello.com/1/boards/" + idBoard + "?lists=all&cards=none";
     var sHtml = "";
 
@@ -598,17 +600,6 @@ function getalllistsinboard() {
 }
 
 function getorganizationid() {
-    var boardExportURL = $('a.js-export-json').attr('href');
-    var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
-    if (!parts) {
-        $.growl.error({
-            title: "TrelloExport",
-            message: "Board menu not open?",
-            fixed: true
-        });
-        return;
-    }
-    idBoard = parts[1];
     var apiURL = "https://trello.com/1/boards/" + idBoard + '?lists=none';
     var orgID = "";
 
@@ -737,17 +728,6 @@ function loadData(exportFormat) {
 
         if (exportboards.length === 0) {
             // export just current board
-            var boardExportURL = $('a.js-export-json').attr('href');
-            var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
-            if (!parts) {
-                $.growl.error({
-                    title: "TrelloExport",
-                    message: "Board menu not open?",
-                    fixed: true
-                });
-                return;
-            }
-            idBoard = parts[1];
             exportboards.push(idBoard);
         }
 
@@ -761,8 +741,6 @@ function loadData(exportFormat) {
                     async: false,
                 })
                 .done(function(data) {
-
-                    // $.growl({  title: "TrelloExport", message: "Got data from Trello, parsing board " + idBoard + "..." });
 
                     // This iterates through each list and builds the dataset                     
                     $.each(data.lists, function(key, list) {
@@ -1233,7 +1211,6 @@ function createExcelExport(jsonComputedCards) {
     saveAs(new Blob([s2ab(wbout)], {
         type: "application/octet-stream"
     }), fileName);
-    $("a.pop-over-header-close-btn")[0].click();
 
     console.log('Done exporting ' + fileName);
 
@@ -1321,7 +1298,6 @@ function createMarkdownExport(jsonComputedCards) {
     saveAs(new Blob([s2ab(mdOut)], {
         type: "text/markdown;charset=utf-8"
     }), fileName);
-    $("a.pop-over-header-close-btn")[0].click();
 
     console.log('Done exporting ' + fileName);
 

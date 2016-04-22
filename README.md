@@ -23,6 +23,9 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below (newer versions up).
 
+### Version 1.9.20:
+Fixes due to Trello UI changes.
+
 ### Version 1.9.19
 Partial refactoring: export flow has been rewritten to better handle data to enable different export modes. **It is now possible to export to Excel and Markdown**, and more export formats could now more easily be added.
 

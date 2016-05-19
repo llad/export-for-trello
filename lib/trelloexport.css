@@ -1,0 +1,10 @@
+#optionslist input, #optionslist select, #optionslist select option, #optionslist textarea {
+	min-height: 1em;
+	padding: 5px;
+	font-size: 14px;
+	font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+}
+#optionslist select {
+	-webkit-appearance: menulist-button;
+	background: #E2E4E6;
+}

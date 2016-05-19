@@ -88,6 +88,12 @@
     - new markdown export mode
 * Whatsnew for v. 1.9.20:
     - fixes due to Trello UI changes
+* Whatsnew for v. 1.9.21:
+    - some UI (CSS) improvements
+    - improved options dialog, resetting options when switching export type
+    - new columns for Excel export: 'Total Checklist items' and 'Completed Checklist items'
+    - better checklists formatting for Excel export
+    - export to HTML
  */
 
 /**
@@ -141,7 +147,6 @@ var $,
     nProcessedLists = 0,
     nProcessedCards = 0,
     $excel_btn,
-    columnHeadings = ['Board', 'List', 'Card #', 'Title', 'Link', 'Description', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Created', 'CreatedBy', 'Due', 'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'],
     dataLimit = 1000, // limit the number of items retrieved from Trello (1000 is max allowed by Trello API server)
     MAXCHARSPERCELL = 32767,
     exportlists = [],
@@ -365,7 +370,7 @@ function searchupdateCheckItemStateOnCardAction(checkitemid, actions) {
             if (action.data.checkItem.id == checkitemid) {
                 var d = new Date(action.date);
                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
-                sOut = '[completed ' + sActionDate + ' by ' + action.memberCreator.fullName + ']';
+                sOut = ' ' + sActionDate + ' by ' + action.memberCreator.fullName;
                 // console.log('checkitemid ' + checkitemid + '=' + sOut);
                 return sOut;
             }
@@ -397,7 +402,7 @@ function TrelloExportOptions() {
     idBoard = parts[1];
 
     var sDialog = '<table id="optionslist">' +
-        '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option></select></td>' +
+        '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option></select></td>' +
         '<tr><td>Done lists name:</td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
         '<tr><td>Type of export:</td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr></table>';
@@ -505,37 +510,24 @@ function TrelloExportOptions() {
         $('#exporttype').on('change', function() {
             var sexporttype = $('#exporttype').val();
             var sSelect;
+            resetOptions();
 
             switch (sexporttype) {
                 case 'list':
-                    $('#choosenboards').parent().parent().remove();
-                    $('#choosenCards').parent().parent().remove();
-                    $('#choosenSinglelist').parent().parent().remove();
-                    $('#filterListsNames').parent().parent().remove();
                     // get a list of all lists in board and let user choose which to export
                     sSelect = getalllistsinboard();
                     $('#optionslist').append('<tr><td>Select one or more Lists</td><td><select multiple id="choosenlist">' + sSelect + '</select></td></tr>');
                     break;
                 case 'board':
-                    $('#choosenlist').parent().parent().remove();
-                    $('#choosenboards').parent().parent().remove();
-                    $('#choosenCards').parent().parent().remove();
-                    $('#choosenSinglelist').parent().parent().remove();
                     $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr>');
                     break;
                 case 'boards':
-                    $('#choosenlist').parent().parent().remove();
-                    $('#choosenCards').parent().parent().remove();
-                    $('#choosenSinglelist').parent().parent().remove();
                     // get a list of all boards
                     sSelect = getallboards();
                     $('#optionslist').append('<tr><td>Select one or more Boards</td><td><select multiple id="choosenboards">' + sSelect + '</select></td></tr>');
                     $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr>');
                     break;
                 case 'cards':
-                    $('#choosenlist').parent().parent().remove();
-                    $('#choosenboards').parent().parent().remove();
-                    $('#filterListsNames').parent().parent().remove();
                     // get a list of all lists in board and let user choose which to export
                     sSelect = getalllistsinboard();
                     $('#optionslist').append('<tr><td>Select one List</td><td><select id="choosenSinglelist"><option value="">Select a list</option>' + sSelect + '</select></td></tr>');
@@ -562,6 +554,14 @@ function TrelloExportOptions() {
     });
 
     return; // close dialog
+}
+
+function resetOptions() {
+    $('#choosenlist').parent().parent().remove();
+    $('#choosenboards').parent().parent().remove();
+    $('#choosenCards').parent().parent().remove();
+    $('#choosenSinglelist').parent().parent().remove();
+    $('#filterListsNames').parent().parent().remove();
 }
 
 function getalllistsinboard() {
@@ -878,7 +878,7 @@ function loadData(exportFormat) {
                                             var jsonCheckList = {};
                                             jsonCheckList.name = list.name;
                                             jsonCheckList.items = [];
-                                            checkListsText += list.name + ':\n';
+                                            checkListsText += list.name + ' (' + list.checkItems.length + ' items):\n';
                                             //checkitems: reordered (issue #4 https://github.com/trapias/trelloExport/issues/4)
                                             var orderedChecklists = Enumerable.From(list.checkItems)
                                                 .OrderBy(function(x) {
@@ -894,7 +894,7 @@ function loadData(exportFormat) {
                                                         // issue #5
                                                         // find who and when item was completed
                                                         var sCompletedBy = searchupdateCheckItemStateOnCardAction(item.id, data.actions);
-                                                        checkListsText += ' - ' + item.name + ' ' + sCompletedBy + '\n';
+                                                        checkListsText += ' - ' + item.name + ' [' + item.state + sCompletedBy + ']\n';
                                                         cItem.completed = true;
                                                         cItem.completedBy = sCompletedBy;
                                                         jsonCheckList.items.push(cItem);
@@ -1096,7 +1096,11 @@ function loadData(exportFormat) {
                 break;
 
             case 'MD':
-                createMarkdownExport(jsonComputedCards);
+                createMarkdownExport(jsonComputedCards, true);
+                break;
+
+            case 'HTML':
+                createHTMLExport(jsonComputedCards);
                 break;
 
             default:
@@ -1126,6 +1130,8 @@ function loadData(exportFormat) {
 function createExcelExport(jsonComputedCards) {
     console.log('TrelloExport exporting to Excel ' + jsonComputedCards.length + ' cards...');
 
+    var columnHeadings = ['Board', 'List', 'Card #', 'Title', 'Link', 'Description', 'Total Checklist items', 'Completed Checklist items', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Created', 'CreatedBy', 'Due', 'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'];
+
     // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));
 
     // prepare Workbook
@@ -1150,6 +1156,16 @@ function createExcelExport(jsonComputedCards) {
     jsonComputedCards.forEach(function(card) {
 
         // console.log('BOARD ' + card.boardName + ' CARD ' + card.cardID);
+        var nTotalCheckListItems=0, nTotalCheckListItemsCompleted=0;
+        card.jsonCheckLists.forEach(function(list) {
+            nTotalCheckListItems += list.items.length;
+
+            list.items.forEach(function(it) {
+                if(it.completed) {
+                    nTotalCheckListItemsCompleted++;
+                }
+            });
+        });
 
         var toStringArray = [
             card.boardName,
@@ -1158,6 +1174,8 @@ function createExcelExport(jsonComputedCards) {
             card.title,
             card.shortLink,
             card.cardDescription,
+            nTotalCheckListItems,
+            nTotalCheckListItemsCompleted,
             card.checkLists,
             card.comments,
             card.attachments,
@@ -1216,12 +1234,12 @@ function createExcelExport(jsonComputedCards) {
 
     $.growl.notice({
         title: "TrelloExport",
-        message: 'Done. XLSX downloading...',
+        message: 'Done. Downloading xlsx file...',
         fixed: true
     });
 }
 
-function createMarkdownExport(jsonComputedCards) {
+function createMarkdownExport(jsonComputedCards, bPrint) {
     console.log('TrelloExport exporting to Markdown ' + jsonComputedCards.length + ' cards...');
 
     // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));
@@ -1292,6 +1310,10 @@ function createMarkdownExport(jsonComputedCards) {
 
     });
 
+    if(!bPrint) {
+        return mdOut;
+    }
+
     var now = new Date();
     var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".md";
 
@@ -1304,6 +1326,32 @@ function createMarkdownExport(jsonComputedCards) {
     $.growl.notice({
         title: "TrelloExport",
         message: 'Done. Downloading markdown file...',
+        fixed: true
+    });
+}
+
+function createHTMLExport(jsonComputedCards) {
+    var md = createMarkdownExport(jsonComputedCards, false);
+    var converter = new showdown.Converter();
+    html = converter.makeHtml(md);
+    var htmlBody = '<html><header><style>body{font-family: "Helvetica Neue";}</style></header><body>\r\n' + html + '\r\n</body></html>';
+
+    var now = new Date();
+    var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".html";
+
+    saveAs(new Blob([s2ab(htmlBody)], {
+        type: "text/html;charset=utf-8"
+    }), fileName);
+
+    // window.open(URL.createObjectURL(new Blob([s2ab(html)], {
+    //     type: "text/html;charset=utf-8"
+    // })));
+
+    console.log('Done exporting ' + fileName);
+
+    $.growl.notice({
+        title: "TrelloExport",
+        message: 'Done. Downloading HTML file...',
         fixed: true
     });
 }

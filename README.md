@@ -23,6 +23,21 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below (newer versions up).
 
+### Version 1.9.21
+Some small improvements, and a new function for **exporting to HTML**.
+
+Details:
+
+- some UI (CSS) improvements for the options dialog
+- improved options dialog, resetting options when switching export type
+- new columns for Excel export: 'Total Checklist items' and 'Completed Checklist items'
+- better checklists formatting for Excel export
+- export to HTML
+
+#### HTML export mode
+The produced file is based on the Markdown export: the same output is generated and then converted to HTML with [showdown](https://github.com/showdownjs/showdown). Suggestions and ideas about how to evolve this are welcome.
+
+
 ### Version 1.9.20:
 Fixes due to Trello UI changes.
 

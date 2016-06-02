@@ -1,3 +1,4 @@
+A couple of enhancements:
 TrelloExport
 ============
 
@@ -22,6 +23,13 @@ This fork initially added the following modifications:
 9. use usernames instead of initials for members
 
 Other improvements have been added since then: see the version history below (newer versions up).
+
+### Version 1.9.22
+A couple of enhancements:
+
+- fix improper .md encoding as per [issue #8](https://github.com/trapias/TrelloExport/issues/8)
+- new option to decide whether to export archived items
+
 
 ### Version 1.9.21
 Some small improvements, and a new function for **exporting to HTML**.

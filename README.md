@@ -1,4 +1,3 @@
-A couple of enhancements:
 TrelloExport
 ============
 

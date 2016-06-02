@@ -94,6 +94,9 @@
     - new columns for Excel export: 'Total Checklist items' and 'Completed Checklist items'
     - better checklists formatting for Excel export
     - export to HTML
+* Whatsnew for v. 1.9.22:
+    - fix improper .md encoding as per issue #8 https://github.com/trapias/TrelloExport/issues/8
+    - new option to decide whether to export archived items
  */
 
 /**
@@ -131,6 +134,11 @@ function html_encode(string) {
     }
     return ret_val;
 }
+
+String.prototype.replaceAll = function(search, replacement) {
+    var target = this;
+    return target.replace(new RegExp(search, 'g'), replacement);
+};
 
 var $,
     byteString,
@@ -402,7 +410,8 @@ function TrelloExportOptions() {
     idBoard = parts[1];
 
     var sDialog = '<table id="optionslist">' +
-        '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option></select></td>' +
+        '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option></select></td></tr>' +
+        '<tr><td>Export archived cards</td><td><input type="checkbox" id="exportArchived"></td></tr>' +
         '<tr><td>Done lists name:</td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
         '<tr><td>Type of export:</td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr></table>';
@@ -419,7 +428,8 @@ function TrelloExportOptions() {
                     callback: function() {
 
                         nameListDone = $('#setnameListDone').val();
-                        var sfilterListsNames, filters;
+                        var sfilterListsNames, filters, bexportArchived;
+                        bexportArchived = $('#exportArchived').is(':checked');
 
                         // export type
                         var sexporttype = $('#exporttype').val();
@@ -490,7 +500,7 @@ function TrelloExportOptions() {
 
                         // launch export
                         setTimeout(function() {
-                            loadData(mode);
+                            loadData(mode, bexportArchived);
                         }, 500);
                         return true;
                     }
@@ -700,7 +710,7 @@ function getallcardsinlist(listid) {
     return sHtml;
 }
 
-function loadData(exportFormat) {
+function loadData(exportFormat, bexportArchived) {
     console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
 
     var promLoadData = new Promise(
@@ -742,10 +752,25 @@ function loadData(exportFormat) {
                 })
                 .done(function(data) {
 
+                    if(!bexportArchived) {
+                        if(data.closed) {
+                            console.log('Skip archived Board ' + data.id);
+                            return true;
+                        }
+                    }
+
                     // This iterates through each list and builds the dataset                     
                     $.each(data.lists, function(key, list) {
+
                         var list_id = list.id;
                         var listName = list.name;
+
+                        if(!bexportArchived) {
+                            if(list.closed) {
+                                console.log('skip archived list ' + listName);
+                                return true;
+                            }
+                        }
 
                         if (exportlists.length > 0) {
 
@@ -783,6 +808,13 @@ function loadData(exportFormat) {
                         // Iterate through each card and transform data as needed
                         $.each(data.cards, function(i, card) {
                             if (card.idList == list_id) {
+
+                                if(!bexportArchived) {
+                                    if(card.closed) {
+                                        console.log('Skip archived card ' + card.name);
+                                        return true;
+                                    }
+                                }
 
                                 //export selected cards only option
                                 if (exportcards.length > 0) {
@@ -1262,13 +1294,13 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
             prevList = card.listName;
         }
 
-        mdOut += '### [' + card.cardID + '] ' + html_encode(card.title.trim()) + '\n\n' +
+        mdOut += '### [' + card.cardID + '] ' + card.title.trim() + '\n\n' +
             '**Created:** ' + card.datetimeCreated + '\n\n' +
             '**Created by:** ' + card.memberCreator + '\n\n' +
             (card.due !== '' ? '**Due:** ' + new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : '') + '\n\n' +
             (card.datetimeDone !== '' ? '**Completed:** ' + card.datetimeDone + '\n\n' : '') +
             (card.completionTimeText !== '' ? '**Elapse:** ' + card.completionTimeText + '\n\n' : '') +
-            (card.cardDescription !== '' ? '**Description:**\n\n' + html_encode(card.cardDescription) + '\n\n' : '');
+            (card.cardDescription !== '' ? '**Description:**\n\n' + card.cardDescription + '\n\n' : '');
 
         // checklists
         var i;
@@ -1277,15 +1309,15 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
             for (i = 0; i < card.jsonCheckLists.length; i++) {
 
                 if (prevCL !== card.jsonCheckLists[i].name) {
-                    mdOut += '#### ' + html_encode(card.jsonCheckLists[i].name) + '\n\n';
+                    mdOut += '#### ' + card.jsonCheckLists[i].name + '\n\n';
                     prevCL = card.jsonCheckLists[i].name;
                 }
 
                 for (var ii = 0; ii < card.jsonCheckLists[i].items.length; ii++) {
                     if (card.jsonCheckLists[i].items[ii].completed === true) {
-                        mdOut += '[x] ' + html_encode(card.jsonCheckLists[i].items[ii].name) + ' ' + html_encode(card.jsonCheckLists[i].items[ii].completedBy) + '\n\n';
+                        mdOut += '[x] ' + card.jsonCheckLists[i].items[ii].name + ' ' + card.jsonCheckLists[i].items[ii].completedBy + '\n\n';
                     } else {
-                        mdOut += '[ ] ' + html_encode(card.jsonCheckLists[i].items[ii].name) + '\n\n';
+                        mdOut += '[ ] ' + card.jsonCheckLists[i].items[ii].name + '\n\n';
                     }
                 }
             }
@@ -1296,7 +1328,7 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
             mdOut += '#### Comments\n';
             for (i = 0; i < card.jsonComments.length; i++) {
                 var d = card.jsonComments[i].date;
-                mdOut += '**' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + ' ' + html_encode(card.jsonComments[i].memberCreator.fullName) + '**\n\n' + html_encode(card.jsonComments[i].text) + '\n\n';
+                mdOut += '**' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + ' ' + card.jsonComments[i].memberCreator.fullName + '**\n\n' + card.jsonComments[i].text + '\n\n';
             }
         }
 
@@ -1304,7 +1336,7 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
         if (card.jsonAttachments.length > 0) {
             mdOut += '#### Attachments\n';
             for (i = 0; i < card.jsonAttachments.length; i++) {
-                mdOut += '**' + html_encode(card.jsonAttachments[i].name) + '** (' + Number(card.jsonAttachments[i].bytes / 1024).toFixed(2) + ' kb) [download](' + card.jsonAttachments[i].url + ')\n\n';
+                mdOut += '**' + card.jsonAttachments[i].name + '** (' + Number(card.jsonAttachments[i].bytes / 1024).toFixed(2) + ' kb) [download](' + card.jsonAttachments[i].url + ')\n\n';
             }
         }
 
@@ -1317,7 +1349,7 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
     var now = new Date();
     var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".md";
 
-    saveAs(new Blob([s2ab(mdOut)], {
+    saveAs(new Blob([mdOut], {
         type: "text/markdown;charset=utf-8"
     }), fileName);
 
@@ -1333,7 +1365,7 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
 function createHTMLExport(jsonComputedCards) {
     var md = createMarkdownExport(jsonComputedCards, false);
     var converter = new showdown.Converter();
-    html = converter.makeHtml(md);
+    html = converter.makeHtml(html_encode(md));
     var htmlBody = '<html><header><style>body{font-family: "Helvetica Neue";}</style></header><body>\r\n' + html + '\r\n</body></html>';
 
     var now = new Date();

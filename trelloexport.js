@@ -97,6 +97,9 @@
 * Whatsnew for v. 1.9.22:
     - fix improper .md encoding as per issue #8 https://github.com/trapias/TrelloExport/issues/8
     - new option to decide whether to export archived items
+* Whatsnew for v. 1.9.23:
+    - OPML export
+    - add memberDone to markdown and HTML exports
  */
 
 /**
@@ -139,6 +142,16 @@ String.prototype.replaceAll = function(search, replacement) {
     var target = this;
     return target.replace(new RegExp(search, 'g'), replacement);
 };
+
+function escape4XML(s) {
+    s = s.replaceAll('"', '&quot;');
+    s = s.replaceAll("'", '&apos;');
+    s = s.replaceAll('<', '&lt;');
+    s = s.replaceAll('>', '&gt;');
+    s = s.replaceAll('&', '&amp;');
+    s = html_encode(s);
+    return s;
+}
 
 var $,
     byteString,
@@ -410,7 +423,7 @@ function TrelloExportOptions() {
     idBoard = parts[1];
 
     var sDialog = '<table id="optionslist">' +
-        '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option></select></td></tr>' +
+        '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td>Export archived cards</td><td><input type="checkbox" id="exportArchived"></td></tr>' +
         '<tr><td>Done lists name:</td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
         '<tr><td>Type of export:</td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
@@ -1135,6 +1148,10 @@ function loadData(exportFormat, bexportArchived) {
                 createHTMLExport(jsonComputedCards);
                 break;
 
+            case 'OPML':
+                createOPMLExport(jsonComputedCards);
+                break;
+
             default:
                 console.log('Unknown exportFormat requested');
                 $.growl.error({
@@ -1299,6 +1316,7 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
             '**Created by:** ' + card.memberCreator + '\n\n' +
             (card.due !== '' ? '**Due:** ' + new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : '') + '\n\n' +
             (card.datetimeDone !== '' ? '**Completed:** ' + card.datetimeDone + '\n\n' : '') +
+            (card.memberDone !== '' ? '**Completed by:** ' + card.memberDone + '\n\n' : '') +
             (card.completionTimeText !== '' ? '**Elapse:** ' + card.completionTimeText + '\n\n' : '') +
             (card.cardDescription !== '' ? '**Description:**\n\n' + card.cardDescription + '\n\n' : '');
 
@@ -1386,4 +1404,111 @@ function createHTMLExport(jsonComputedCards) {
         message: 'Done. Downloading HTML file...',
         fixed: true
     });
+}
+
+function createOPMLExport(jsonComputedCards) {
+
+    var now = new Date();
+    var sXML = '<?xml version="1.0" encoding="utf-8"?><opml version="1.0">';
+    sXML += '<head><title>TrelloExport</title><dateCreated>' + now.toISOString() + '</dateCreated></head><body>';
+
+    var prevBoard=null, prevList=null, description=null;
+
+    // loop jsonComputedCards
+    jsonComputedCards.forEach(function(card) {
+
+        if (prevBoard !== card.boardName) {
+            if(prevBoard!==null) {
+                sXML += '</outline>';
+            }
+            // add board
+            sXML += '<outline text="' + escape4XML(card.boardName.trim()) + '">';
+            prevBoard = card.boardName;
+        }
+
+        if (prevList !== card.listName) {
+            if(prevList!==null) {
+                sXML += '</outline>';
+            }
+            // add list
+            sXML += '<outline text="' + escape4XML(card.listName.trim()) + '">';
+            prevList = card.listName;
+        }
+
+        // std is description, omnioutliner uses _note
+        sXML += '<outline text="' + escape4XML(card.title.trim()) + '" _note="' + escape4XML(card.cardDescription) + '" created="' + card.datetimeCreated + '" createdBy="' + card.memberCreator + '"' + 
+            (card.due !== '' ? ' due="' + new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() + '"' : '') +
+            (card.datetimeDone !== '' ? ' completed="' + card.datetimeDone + '"' : '') +
+            (card.memberDone !== '' ? ' completedBy="' + card.memberDone + '"' : '') +
+            (card.completionTimeText !== '' ? ' elapse="' + card.completionTimeText + '"' : '') +
+             '>';
+
+        // checklists
+        var i;
+        if (card.jsonCheckLists.length > 0) {
+            sXML += '<outline text="Checklists">';
+            for (i = 0; i < card.jsonCheckLists.length; i++) {
+                sXML += '<outline text="' + card.jsonCheckLists[i].name + '">';
+                for (var ii = 0; ii < card.jsonCheckLists[i].items.length; ii++) {
+                    if (card.jsonCheckLists[i].items[ii].completed === true) {
+                        sXML += '<outline text="' + '[x] ' + card.jsonCheckLists[i].items[ii].name + '" completedBy="' + card.jsonCheckLists[i].items[ii].completedBy + '"></outline>';
+                    } else {
+                        sXML += '<outline text="' + '[ ] ' + card.jsonCheckLists[i].items[ii].name + '"></outline>';
+                    }
+                }
+                sXML += '</outline>';
+            }
+            sXML += '</outline>';
+        }
+
+        // comments
+        if (card.jsonComments.length > 0) {
+            sXML += '<outline text="Comments">';
+            for (i = 0; i < card.jsonComments.length; i++) {
+                var d = card.jsonComments[i].date;
+                sXML += '<outline text="' + escape4XML(card.jsonComments[i].text) + '" created="' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + '" createdBy="' + escape4XML(card.jsonComments[i].memberCreator.fullName) + '"></outline>';
+            }
+            sXML += '</outline>';
+        }
+
+        // attachments
+        if (card.jsonAttachments.length > 0) {
+            sXML += '<outline text="Attachments">';
+            for (i = 0; i < card.jsonAttachments.length; i++) {
+                sXML += '<outline text="' + escape4XML(card.jsonAttachments[i].name) + '" size="' + Number(card.jsonAttachments[i].bytes / 1024).toFixed(2) + ' kb" url="' + escape4XML(card.jsonAttachments[i].url) + '"></outline>';
+            }
+            sXML += '</outline>';
+        }
+
+        sXML += '</outline>';
+    });
+
+    sXML += '</outline></outline>';
+    sXML += '</body></opml>';
+
+    var oParser = new DOMParser();
+    var oDOM = oParser.parseFromString(sXML, "text/xml");
+
+    var s = new XMLSerializer();
+    var opml = s.serializeToString(oDOM);
+    // console.log('OPML: ' + opml);
+
+    var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".opml";
+
+    saveAs(new Blob([opml], {
+        type: "text/xml;charset=utf-8"
+    }), fileName);
+
+    // window.open(URL.createObjectURL(new Blob([s2ab(html)], {
+    //     type: "text/html;charset=utf-8"
+    // })));
+
+    console.log('Done exporting ' + fileName);
+
+    $.growl.notice({
+        title: "TrelloExport",
+        message: 'Done. Downloading OPML file...',
+        fixed: true
+    });
+
 }

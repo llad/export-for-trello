@@ -23,6 +23,11 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below (newer versions up).
 
+### Version 1.9.23
+Added new capability to **export to OPML**.
+
+More in this [blog post](http://trapias.github.io/blog/trelloexport-1-9-23).
+
 ### Version 1.9.22
 A couple of enhancements:
 

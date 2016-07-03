@@ -23,6 +23,14 @@ This fork initially added the following modifications:
 
 Other improvements have been added since then: see the version history below (newer versions up).
 
+### Version 1.9.24
+
+New features:
+
+- new checkboxes to enable/disable exporting of comments, checklist items and attachments
+- new option to export checklist items to rows, for Excel only
+
+
 ### Version 1.9.23
 Added new capability to **export to OPML**.
 

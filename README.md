@@ -11,6 +11,12 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.25
+New feature: paginate cards loading, so to be able to load all cards even when exceeding the Trello API limit of 1000 records per call.
+
+Please consider this a beta: it's not yet available on the Chrome Web Store, so if you want to try it please install locally (see below).
+
+
 ### Version 1.9.24
 
 New features:

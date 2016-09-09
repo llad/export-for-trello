@@ -105,6 +105,9 @@
     - new option to export checklist items to rows, for Excel only
 * Whatsnew for v. 1.9.25:
     - paginate cards loading so to be able to load all cards, even if exceeding the API limit of 1000 records per call
+* Whatsnew for v. 1.9.26:
+    - export points estimate and consumed from Card titles based on Scrum for Trello
+    - improved regex for Trello Plus estimate/spent in card titles
  */
 
 /**
@@ -266,7 +269,7 @@ function getCommentCardActions(boardID, idCard) {
     }
     $.ajax({
         url: 'https://trello.com/1/card/' + idCard + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit,
-        // url:'https://trello.com/1/boards/' + boardID + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit, 
+        // url:'https://trello.com/1/boards/' + boardID + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit,
         dataType: 'json',
         async: false,
         success: function(actionsData) {
@@ -611,7 +614,7 @@ function TrelloExportOptions() {
         });
 
         // todo: show progress
-        // 
+        //
 
     });
 
@@ -789,6 +792,19 @@ function getallcardsinlist(listid) {
     return sHtml;
 }
 
+function extractFloat(str, regex, groupIndex) {
+    var value = ''
+    var match = str.match(regex);
+    if (match !== null) {
+        value = parseFloat(match[groupIndex]);
+        if (!!value === false) {
+            value = '';
+        }
+    }
+    return value;
+}
+
+
 function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows) {
     console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
 
@@ -809,10 +825,12 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
         var jsonComputedCards = [];
 
         // RegEx to find the Trello Plus Spent and Estimate (spent/estimate) in card titles
-        var SpentEstRegex = /\(([0-9]+(\.[0-9]+)?)\/?([0-9]+(\.[0-9]+)?)\)?/;
+        var SpentEstRegex = /(\(([0-9]+(\.[0-9]+)?)(\/?([0-9]+(\.[0-9]+)?))?\))/;
+        var PointsEstRegex = /(\(([0-9]+(\.[0-9]+)?)\))/;
+        var PointsConRegex = /(\[([0-9]+(\.[0-9]+)?)\])/;
 
         /*
-            get data via Trello API instead of Board's json 
+            get data via Trello API instead of Board's json
         */
 
         if (exportboards.length === 0) {
@@ -827,7 +845,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
             var boardName = getBoardName(idBoard);
 
             var readCards = 0;
-            
+
             var apiURL = "https://trello.com/1/boards/" + idBoard + "/lists?fields=name,closed"; //"?lists=all&cards=all&card_fields=all&card_checklists=all&members=all&member_fields=all&membersInvited=all&checklists=all&organization=true&organization_fields=all&fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&card_attachments=true";
             $.ajax({
                     url: apiURL,
@@ -844,7 +862,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                     //     }
                     // }
 
-                    // This iterates through each list and builds the dataset                     
+                    // This iterates through each list and builds the dataset
                     $.each(data, function(key, list) {
 
                         var sBefore=''; // reset for each list
@@ -893,7 +911,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                         }
 
                         var exportedCardsIDs =[];
-                        
+
                         do {
                             readCards=0;
                             $.ajax({
@@ -958,23 +976,19 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 jsonComments = [],
                                                 jsonAttachments = [];
 
-                                            //Trello Plus Spent/Estimate
-                                            var spentData = title.match(SpentEstRegex);
-                                            if (spentData !== null) {
-                                                spent = spentData[1];
-                                                estimate = spentData[3];
-                                                if (spent === undefined) spent = 0;
-                                                if (estimate === undefined) estimate = 0;
-                                                // console.log('SPENT ' + spent + ' / estimate ' + estimate);
-                                            } else {
-                                                //no spent info found, do nothing
-                                                // console.log('UNSPENT ' + spent + ' / estimate ' + estimate);
-                                                spent = 0;
-                                                estimate = 0;
-                                            }
+                                            // Trello Plus Spent/Estimate
+                                            spent = extractFloat(title, SpentEstRegex, 2);
+                                            estimate = extractFloat(title, SpentEstRegex, 5);
 
+                                            // Scrum for Trello Points Estimate/Consumed
+                                            points_estimate = extractFloat(title, PointsEstRegex, 2);
+                                            points_consumed = extractFloat(title, PointsConRegex, 2);
+
+                                            // Clean-up title
                                             title = title.replace(SpentEstRegex, '');
-                                            title = title.replace('() ', '');
+                                            title = title.replace(PointsEstRegex, '');
+                                            title = title.replace(PointsConRegex, '');
+                                            title = title.trim();
 
                                             // tag archived cards
                                             if (card.closed) {
@@ -1073,7 +1087,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                         if ((action.type == "commentCard" || action.type == 'copyCommentCard')) {
                                                             if (card.id == action.data.card.id) {
                                                                 var jsonComment = {};
-                                                                //2013-08-08T06:57:18 
+                                                                //2013-08-08T06:57:18
                                                                 var d = new Date(action.date);
                                                                 jsonComment.date = d;
                                                                 jsonComment.text = action.data.text;
@@ -1203,6 +1217,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'votes': card.idMembersVoted.length,
                                                 'spent': spent,
                                                 'estimate': estimate,
+                                                'points_estimate' : points_estimate,
+                                                'points_consumed' : points_consumed,
                                                 'datetimeCreated': datetimeCreated,
                                                 'memberCreator': memberCreator,
                                                 'due': due,
@@ -1306,11 +1322,22 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 function createExcelExport(jsonComputedCards, bcklAsRows) {
     console.log('TrelloExport exporting to Excel ' + jsonComputedCards.length + ' cards...');
 
-    var columnHeadings = ['Board', 'List', 'Card #', 'Title', 'Link', 'Description', 'Total Checklist items', 'Completed Checklist items', 'Checklists', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Created', 'CreatedBy', 'Due', 'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'];
+    var columnHeadings = [
+        'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+        'Total Checklist items', 'Completed Checklist items', 'Checklists',
+        'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+        'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
+        'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'];
 
     if (bcklAsRows) {
         // checklist items as rows
-        columnHeadings = ['Board', 'List', 'Card #', 'Title', 'Link', 'Description', 'Total Checklist items', 'Completed Checklist items', 'Checklist', 'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate', 'Created', 'CreatedBy', 'Due', 'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'];
+        columnHeadings = [
+        'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+        'Total Checklist items', 'Completed Checklist items', 'Checklist',
+        'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
+        'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+        'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
+        'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'];
     }
 
     // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));
@@ -1368,6 +1395,8 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
                 card.votes,
                 card.spent,
                 card.estimate,
+                card.points_estimate,
+                card.points_consumed,
                 card.datetimeCreated,
                 card.memberCreator,
                 card.due,
@@ -1412,6 +1441,8 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
                             card.votes,
                             card.spent,
                             card.estimate,
+                            card.points_estimate,
+                            card.points_consumed,
                             card.datetimeCreated,
                             card.memberCreator,
                             card.due,
@@ -1454,6 +1485,8 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
                     card.votes,
                     card.spent,
                     card.estimate,
+                    card.points_estimate,
+                    card.points_consumed,
                     card.datetimeCreated,
                     card.memberCreator,
                     card.due,
@@ -1479,7 +1512,7 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
     var board_title = "TrelloExport";
     var ws = sheet_from_array_of_arrays(w.data);
 
-    // add worksheet to workbook 
+    // add worksheet to workbook
     wb.SheetNames.push(board_title);
     wb.Sheets[board_title] = ws;
     console.log("Added sheet " + board_title);

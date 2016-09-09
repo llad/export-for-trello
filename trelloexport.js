@@ -105,9 +105,12 @@
     - new option to export checklist items to rows, for Excel only
 * Whatsnew for v. 1.9.25:
     - paginate cards loading so to be able to load all cards, even if exceeding the API limit of 1000 records per call
-* Whatsnew for v. 1.9.26:
+* Whatsnew for v. 1.9.26 (thanks chris https://github.com/collisdigital):
     - export points estimate and consumed from Card titles based on Scrum for Trello
     - improved regex for Trello Plus estimate/spent in card titles
+* Whatsnew for v. 1.9.27:
+    - fix ajax.fail functions
+    - fix loading boards when current board does not belong to any organization
  */
 
 /**
@@ -649,11 +652,11 @@ function getalllistsinboard() {
                 }
             });
         })
-        .fail(function() {
+        .fail(function(jqXHR, textStatus, errorThrown) {
             console.log("getalllistsinboard error!!!");
             $.growl.error({
                 title: "TrelloExport",
-                message: reason,
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
                 fixed: true
             });
         })
@@ -676,11 +679,11 @@ function getorganizationid() {
             //console.log('DATA:' + JSON.stringify(data));
             orgID = data.idOrganization;
         })
-        .fail(function() {
+        .fail(function(jqXHR, textStatus, errorThrown) {
             console.log("getorganizationid error!!!");
             $.growl.error({
                 title: "TrelloExport",
-                message: reason,
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
                 fixed: true
             });
         })
@@ -696,8 +699,13 @@ function getallboards() {
     var orgID = getorganizationid();
 
     // GET /1/organizations/[idOrg or name]/boards
-    var apiURL = "https://trello.com/1/organizations/" + orgID + "/boards?lists=none";
+    var apiURL = "https://trello.com/1/organizations/" + orgID + "/boards?lists=none&fields=name,idOrganization,closed";
     var sHtml = "";
+
+    if(orgID===null) {
+        // current board outside any organization, get all boards
+        apiURL = "https://trello.com/1/members/me/boards?lists=none&fields=name,idOrganization,closed";
+    }
 
     $.ajax({
             url: apiURL,
@@ -714,11 +722,11 @@ function getallboards() {
                 }
             }
         })
-        .fail(function() {
-            console.log("getallboards error!!!");
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            console.log("getallboards error: " + jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText);
             $.growl.error({
                 title: "TrelloExport",
-                message: reason,
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
                 fixed: true
             });
         })
@@ -741,11 +749,11 @@ function getBoardName(id) {
         .done(function(data) {
             sName = data.name;
         })
-        .fail(function() {
+        .fail(function(jqXHR, textStatus, errorThrown) {
             console.log("getBoardName error!!!");
             $.growl.error({
                 title: "TrelloExport",
-                message: reason,
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
                 fixed: true
             });
         })
@@ -777,11 +785,11 @@ function getallcardsinlist(listid) {
                 }
             }
         })
-        .fail(function() {
+        .fail(function(jqXHR, textStatus, errorThrown) {
             console.log("getallcardsinlist error!!!");
             $.growl.error({
                 title: "TrelloExport",
-                message: reason,
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
                 fixed: true
             });
         })
@@ -1239,12 +1247,12 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                     });
 
                                 })
-                                .fail(function() {
+                                .fail(function(jqXHR, textStatus, errorThrown) {
                                     console.log("Error!!!");
                                     readCards=-1;
                                     $.growl.error({
                                         title: "TrelloExport",
-                                        message: reason,
+                                        message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
                                         fixed: true
                                     });
                                 });
@@ -1255,11 +1263,11 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                     });
 
                 })
-                .fail(function() {
+                .fail(function(jqXHR, textStatus, errorThrown) {
                     console.log("Error!!!");
                     $.growl.error({
                         title: "TrelloExport",
-                        message: reason,
+                        message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
                         fixed: true
                     });
                 });

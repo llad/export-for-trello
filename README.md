@@ -11,6 +11,20 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.27:
+
+- fix ajax.fail functions
+- fix loading boards when current board does not belong to any organization
+
+### Version 1.9.26:
+
+- export points estimate and consumed from Card titles based on Scrum for Trello
+- improved regex for Trello Plus estimate/spent in card titles
+
+
+Changes  merged from [pull request #11](https://github.com/trapias/TrelloExport/pull/11) by [Chris](https://github.com/collisdigital), thank you! 
+
+
 ### Version 1.9.25
 New feature: paginate cards loading, so to be able to load all cards even when exceeding the Trello API limit of 1000 records per call.
 

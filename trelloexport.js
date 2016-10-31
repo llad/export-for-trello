@@ -111,6 +111,8 @@
 * Whatsnew for v. 1.9.27:
     - fix ajax.fail functions
     - fix loading boards when current board does not belong to any organization
+* Whatsnew for v. 1.9.28:
+    - fix cards loading: something is broken with the paginated loading introduced with 1.9.25; to be further investigated
  */
 
 /**
@@ -186,7 +188,7 @@ var $,
     exportcards = [],
     nameListDone = "Done",
     filterListsNames = [],
-    pageSize = 20;
+    pageSize = 1000;
 
 function sheet_from_array_of_arrays(data, opts) {
     // console.log('sheet_from_array_of_arrays ' + data);
@@ -533,8 +535,6 @@ function TrelloExportOptions() {
 
                         // console.log('datalimit=' + dataLimit + ', sexporttype=' + sexporttype + ', exportlists=' + exportlists);
 
-
-
                         // launch export
                         setTimeout(function() {
                             loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows);
@@ -702,7 +702,7 @@ function getallboards() {
     var apiURL = "https://trello.com/1/organizations/" + orgID + "/boards?lists=none&fields=name,idOrganization,closed";
     var sHtml = "";
 
-    if(orgID===null) {
+    if (orgID === null) {
         // current board outside any organization, get all boards
         apiURL = "https://trello.com/1/members/me/boards?lists=none&fields=name,idOrganization,closed";
     }
@@ -873,7 +873,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                     // This iterates through each list and builds the dataset
                     $.each(data, function(key, list) {
 
-                        var sBefore=''; // reset for each list
+                        var sBefore = ''; // reset for each list
 
                         var list_id = list.id;
                         var listName = list.name;
@@ -918,12 +918,12 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                             listName = '[archived] ' + listName;
                         }
 
-                        var exportedCardsIDs =[];
+                        var exportedCardsIDs = [];
 
                         do {
-                            readCards=0;
+                            readCards = 0;
                             $.ajax({
-                                // checklists=all&
+                                    // checklists=all&
                                     url: "https://trello.com/1/lists/" + list_id + "/cards?fields=all&checklists=all&members=true&member_fields=all&membersInvited=all&organization=true&organization_fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&attachments=true&limit=" + pageSize + "&before=" + sBefore,
                                     async: false,
                                 })
@@ -938,17 +938,17 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                         // console.log('=-=-=-=-=-=-=-=>>>>> I = ' + i);
 
-                                         if(sBefore===card.id) {
+                                        if (sBefore === card.id) {
                                             // console.log('ALREADY USED BEFORE VALUE ' + sBefore);
-                                            readCards=-1;
+                                            readCards = -1;
                                             return;
                                         }
 
-                                        if(i===0) {
+                                        if (i === 0) {
                                             sBefore = card.id;
                                         }
 
-                                        if (card.idList == list_id && $.inArray(card.id, exportedCardsIDs)=== -1) {
+                                        if (card.idList == list_id && $.inArray(card.id, exportedCardsIDs) === -1) {
 
                                             if (!bexportArchived) {
                                                 if (card.closed) {
@@ -968,7 +968,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             exportedCardsIDs.push(card.id);
                                             var title = card.name;
 
-                                            console.log(i + ') Card #' + card.idShort + ' ' + title + ' (' + card.id + ')');
+                                            console.log(i + ') Card #' + card.idShort + ' ' + title + ' (' + card.id + ') - POS: ' + card.pos);
                                             nProcessedCards++;
 
                                             var spent = 0;
@@ -1225,8 +1225,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'votes': card.idMembersVoted.length,
                                                 'spent': spent,
                                                 'estimate': estimate,
-                                                'points_estimate' : points_estimate,
-                                                'points_consumed' : points_consumed,
+                                                'points_estimate': points_estimate,
+                                                'points_consumed': points_consumed,
                                                 'datetimeCreated': datetimeCreated,
                                                 'memberCreator': memberCreator,
                                                 'due': due,
@@ -1249,7 +1249,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                 })
                                 .fail(function(jqXHR, textStatus, errorThrown) {
                                     console.log("Error!!!");
-                                    readCards=-1;
+                                    readCards = -1;
                                     $.growl.error({
                                         title: "TrelloExport",
                                         message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
@@ -1335,17 +1335,19 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
         'Total Checklist items', 'Completed Checklist items', 'Checklists',
         'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
         'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
-        'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'];
+        'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
+    ];
 
     if (bcklAsRows) {
         // checklist items as rows
         columnHeadings = [
-        'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
-        'Total Checklist items', 'Completed Checklist items', 'Checklist',
-        'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
-        'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
-        'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
-        'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'];
+            'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+            'Total Checklist items', 'Completed Checklist items', 'Checklist',
+            'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
+            'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+            'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
+            'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
+        ];
     }
 
     // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));

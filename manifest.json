@@ -1,29 +1,29 @@
 {
-	"name": "TrelloExport",
-	"version": "1.9.27",
-	"manifest_version" : 2,
+    "name": "TrelloExport",
+    "version": "1.9.28",
+    "manifest_version": 2,
 
-	"description": "Export Trello Boards to Excel, Markdown, HTML and OPML",
-	"icons": { "128": "icons/trelloexport_128.png" },
+    "description": "Export Trello Boards to Excel, Markdown, HTML and OPML",
+    "icons": { "128": "icons/trelloexport_128.png" },
 
-	"content_scripts": [
-		{
-			"matches": ["https://trello.com/*"],
-			"css": ["lib/jquery.growl.css",
-					"lib/zebra/css/flat/zebra_dialog.css",
-					"lib/trelloexport.css"],
-			"js": ["lib/jquery-2.1.0.min.js",
-                   "lib/FileSaver.min.js",
-                   "lib/js-xlsx/jszip.js",
-				   "lib/js-xlsx/xlsx.full.min.js",
-				   "lib/linq.min.js",
-				   "lib/jquery.growl.js",
-				   "lib/zebra/zebra_dialog.js",
-                   "lib/injectTrelloExporter.js",
-                   "lib/datediff.js",
-                   "lib/showdown.min.js",
-		           "trelloexport.js"]
-		}
-	]
+    "content_scripts": [{
+        "matches": ["https://trello.com/*"],
+        "css": ["lib/jquery.growl.css",
+            "lib/zebra/css/flat/zebra_dialog.css",
+            "lib/trelloexport.css"
+        ],
+        "js": ["lib/jquery-2.1.0.min.js",
+            "lib/FileSaver.min.js",
+            "lib/js-xlsx/jszip.js",
+            "lib/js-xlsx/xlsx.full.min.js",
+            "lib/linq.min.js",
+            "lib/jquery.growl.js",
+            "lib/zebra/zebra_dialog.js",
+            "lib/injectTrelloExporter.js",
+            "lib/datediff.js",
+            "lib/showdown.min.js",
+            "trelloexport.js"
+        ]
+    }]
 
 }

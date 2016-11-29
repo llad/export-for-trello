@@ -8,3 +8,7 @@
 	-webkit-appearance: menulist-button;
 	background: #E2E4E6;
 }
+
+.TrelloExport h3 {
+	color: blue;
+}

@@ -113,6 +113,9 @@
     - fix loading boards when current board does not belong to any organization
 * Whatsnew for v. 1.9.28:
     - fix cards loading: something is broken with the paginated loading introduced with 1.9.25; to be further investigated
+* Whatsnew for v. 1.9.29:
+    - fix bug using user fullName, might not be available (thanks Natalia L.)
+    - new css to format HTML exported files
  */
 
 /**
@@ -406,9 +409,11 @@ function searchupdateCheckItemStateOnCardAction(checkitemid, actions) {
                 var d = new Date(action.date);
                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                 completedObject.date = sActionDate;
-                completedObject.by = action.memberCreator.fullName;
-                // sOut = ' ' + sActionDate + ' by ' + action.memberCreator.fullName;
-                // console.log('checkitemid ' + checkitemid + '=' + sOut);
+                if(action.memberCreator !== undefined) {
+                    completedObject.by = (action.memberCreator.fullName !== undefined ? action.memberCreator.fullName : action.memberCreator.username); 
+                } else {
+                    completedObject.by = '';
+                }
                 return completedObject;
             }
         }
@@ -1011,7 +1016,14 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             $.each(memberIDs, function(i, memberID) {
                                                 $.each(card.members, function(key, member) {
                                                     if (member.id == memberID) {
-                                                        memberInitials.push(member.fullName); // initials, username or fullName
+                                                        if(member.fullName !== undefined) {
+                                                            memberInitials.push(member.fullName); // initials, username or fullName    
+                                                        } else {
+                                                            if(member.username !== undefined) {
+                                                                memberInitials.push(member.username);
+                                                            }
+                                                        }
+                                                        
                                                     }
                                                 });
                                             });
@@ -1102,7 +1114,10 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 if (action.memberCreator) {
                                                                     jsonComment.memberCreator = action.memberCreator;
-                                                                    commentsText += '[' + sActionDate + ' - ' + action.memberCreator.fullName + '] ' + action.data.text + "\n";
+                                                                    if(jsonComment.memberCreator.fullName === undefined) {
+                                                                        jsonComment.memberCreator.fullName = jsonComment.memberCreator.username;
+                                                                    }
+                                                                    commentsText += '[' + sActionDate + ' - ' + (action.memberCreator.fullName !== undefined ? action.memberCreator.fullName : action.memberCreator.username) + '] ' + action.data.text + "\n";
                                                                 } else {
                                                                     jsonComment.memberCreator = null;
                                                                     commentsText += '[' + sActionDate + '] ' + action.data.text + "\n";
@@ -1135,13 +1150,18 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 })
                                                 .ToArray();
                                             if (query.length > 0) {
-                                                memberCreator = query[0].memberCreator.fullName + ' (' + query[0].memberCreator.username + ')';
+                                                if(query[0].memberCreator.fullName !== undefined) {
+                                                    memberCreator = query[0].memberCreator.fullName + ' (' + query[0].memberCreator.username + ')';    
+                                                } else {
+                                                    memberCreator = query[0].memberCreator.username;
+                                                }
+                                                
                                                 datetimeCreated = new Date(query[0].date);
                                             } else {
                                                 //use the API to get the action created method
                                                 var actionCreateCard = getCreateCardAction(idBoard, card.id);
                                                 if (actionCreateCard) {
-                                                    memberCreator = actionCreateCard.memberCreator.fullName;
+                                                    memberCreator = (actionCreateCard.memberCreator.fullName !== undefined ? actionCreateCard.memberCreator.fullName : actionCreateCard.memberCreator.username);
                                                     datetimeCreated = new Date(actionCreateCard.date);
                                                 } else {
                                                     // calculate datetimeCreated from card id
@@ -1175,12 +1195,12 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                         })
                                                         .ToArray();
                                                     if (query.length > 0) {
-                                                        memberDone = query[0].memberCreator.fullName;
+                                                        memberDone = (query[0].memberCreator.fullName !== undefined ? query[0].memberCreator.fullName : query[0].memberCreator.username);
                                                         datetimeDone = query[0].date;
                                                     } else {
                                                         var actionMoveCard = getMoveCardAction(idBoard, card.id, allnameListDone[nd].trim());
                                                         if (actionMoveCard) {
-                                                            memberDone = actionMoveCard.memberCreator.fullName;
+                                                            memberDone = (actionMoveCard.memberCreator.fullName !== undefined ? actionMoveCard.memberCreator.fullName : actionMoveCard.memberCreator.username);
                                                             datetimeDone = actionMoveCard.date;
                                                         } else {
                                                             memberDone = "";
@@ -1650,7 +1670,7 @@ function createHTMLExport(jsonComputedCards) {
     var md = createMarkdownExport(jsonComputedCards, false);
     var converter = new showdown.Converter();
     html = converter.makeHtml(html_encode(md));
-    var htmlBody = '<html><header><style>body{font-family: "Helvetica Neue";}</style></header><body>\r\n' + html + '\r\n</body></html>';
+    var htmlBody = '<!DOCTYPE html>\r\n<html><head><link rel="stylesheet" href="http://trapias.github.io/assets/TrelloExport/default.css"></head><body class="TrelloExport">\r\n' + html + '\r\n</body></html>';
 
     var now = new Date();
     var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".html";

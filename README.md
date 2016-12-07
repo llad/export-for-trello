@@ -11,6 +11,14 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.30:
+
+New CSS and options to format HTML exported files.
+
+- fix 1.9.29 beta (not published to Chrome Web Store)
+- finalize new css for HTML exports
+
+
 ### Version 1.9.28:
 
 - fix cards loading: something is broken with the paginated loading introduced with version 1.9.25; to be further investigated

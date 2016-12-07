@@ -116,6 +116,9 @@
 * Whatsnew for v. 1.9.29:
     - fix bug using user fullName, might not be available (thanks Natalia L.)
     - new css to format HTML exported files
+* Whatsnew for v. 1.9.30:
+    - fix 1.9.29 beta
+    - finalize new css for HTML exports
  */
 
 /**
@@ -123,6 +126,8 @@
  * (c) 2012 Steven Levithan <http://slevithan.com/>
  * MIT license
  */
+var VERSION = '1.9.30';
+
 if (!String.prototype.codePointAt) {
     String.prototype.codePointAt = function(pos) {
         pos = isNaN(pos) ? 0 : pos;
@@ -174,8 +179,8 @@ var $,
     xlsx,
     ArrayBuffer,
     Uint8Array,
-    Blob,
-    saveAs,
+    // Blob,
+    // saveAs,
     actionsCreateCard = [],
     actionsMoveCard = [],
     actionsCommentCard = [],
@@ -409,8 +414,8 @@ function searchupdateCheckItemStateOnCardAction(checkitemid, actions) {
                 var d = new Date(action.date);
                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                 completedObject.date = sActionDate;
-                if(action.memberCreator !== undefined) {
-                    completedObject.by = (action.memberCreator.fullName !== undefined ? action.memberCreator.fullName : action.memberCreator.username); 
+                if (action.memberCreator !== undefined) {
+                    completedObject.by = (action.memberCreator.fullName !== undefined ? action.memberCreator.fullName : action.memberCreator.username);
                 } else {
                     completedObject.by = '';
                 }
@@ -446,8 +451,9 @@ function TrelloExportOptions() {
     var sDialog = '<table id="optionslist">' +
         '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td>Export:</td><td><input type="checkbox" id="exportArchived" title="Export archived cards">Archived cards ' +
-        '<input type="checkbox" id="comments" title="Export comments" checked>Comments<br/><input type="checkbox" id="checklists" title="Export checklists" checked>Checklists <input type="checkbox" id="attachments" title="Export attachments" checked>Attachments</td></tr>' +
+        '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments</td></tr>' +
         '<tr id="cklAsRowsRow"><td>Checklist items as rows</td><td><input type="checkbox" id="cklAsRows" title="Checklist items as rows"></td></tr>' +
+        '<tr id="ckHTMLCardInfoRow" style="display:none"><td>Export card info (created, createdby):</td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Checklist items as rows"></td></tr>' +
         '<tr><td>Done lists name:</td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
         '<tr><td>Type of export:</td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr></table>';
@@ -457,7 +463,7 @@ function TrelloExportOptions() {
 
             // open options dialog to configure & launch export
             $.Zebra_Dialog(sDialog, {
-                title: 'TrelloExport Options',
+                title: 'TrelloExport ' + VERSION,
                 type: false,
                 'buttons': [{
                     caption: 'Export',
@@ -465,12 +471,13 @@ function TrelloExportOptions() {
 
                         nameListDone = $('#setnameListDone').val();
                         var mode = $('#exportmode').val();
-                        var sfilterListsNames, filters, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows;
+                        var sfilterListsNames, filters, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows, bckHTMLCardInfo;
                         bexportArchived = $('#exportArchived').is(':checked');
                         bExportComments = $('#comments').is(':checked');
                         bExportChecklists = $('#checklists').is(':checked');
                         bExportAttachments = $('#attachments').is(':checked');
                         bcklAsRows = $('#cklAsRows').is(':checked');
+                        bckHTMLCardInfo = $('#ckHTMLCardInfo').is(':checked');
                         if (!bExportChecklists) {
                             bcklAsRows = false;
                         }
@@ -542,7 +549,7 @@ function TrelloExportOptions() {
 
                         // launch export
                         setTimeout(function() {
-                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows);
+                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows, bckHTMLCardInfo);
                         }, 500);
                         return true;
                     }
@@ -602,12 +609,22 @@ function TrelloExportOptions() {
 
         $('#exportmode').on('change', function() {
             var mode = $('#exportmode').val();
-            if (mode === 'XLSX') {
-                $('#cklAsRowsRow').show();
+            $('#cklAsRowsRow').hide();
+            $('#ckHTMLCardInfoRow').hide();
 
-            } else {
-                $('#cklAsRowsRow').hide();
+            switch (mode) {
+                case 'XLSX':
+                    $('#cklAsRowsRow').show();
+                    break;
+                case 'HTML':
+                case 'MD':
+                    $('#ckHTMLCardInfoRow').show();
+                    break;
+                default:
+
+                    break;
             }
+
         });
 
         $('#checklists').on('change', function() {
@@ -818,7 +835,7 @@ function extractFloat(str, regex, groupIndex) {
 }
 
 
-function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows) {
+function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows, bckHTMLCardInfo) {
     console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
 
     var promLoadData = new Promise(
@@ -1016,14 +1033,14 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             $.each(memberIDs, function(i, memberID) {
                                                 $.each(card.members, function(key, member) {
                                                     if (member.id == memberID) {
-                                                        if(member.fullName !== undefined) {
+                                                        if (member.fullName !== undefined) {
                                                             memberInitials.push(member.fullName); // initials, username or fullName    
                                                         } else {
-                                                            if(member.username !== undefined) {
+                                                            if (member.username !== undefined) {
                                                                 memberInitials.push(member.username);
                                                             }
                                                         }
-                                                        
+
                                                     }
                                                 });
                                             });
@@ -1114,7 +1131,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 if (action.memberCreator) {
                                                                     jsonComment.memberCreator = action.memberCreator;
-                                                                    if(jsonComment.memberCreator.fullName === undefined) {
+                                                                    if (jsonComment.memberCreator.fullName === undefined) {
                                                                         jsonComment.memberCreator.fullName = jsonComment.memberCreator.username;
                                                                     }
                                                                     commentsText += '[' + sActionDate + ' - ' + (action.memberCreator.fullName !== undefined ? action.memberCreator.fullName : action.memberCreator.username) + '] ' + action.data.text + "\n";
@@ -1150,13 +1167,16 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 })
                                                 .ToArray();
                                             if (query.length > 0) {
-                                                if(query[0].memberCreator.fullName !== undefined) {
-                                                    memberCreator = query[0].memberCreator.fullName + ' (' + query[0].memberCreator.username + ')';    
-                                                } else {
-                                                    memberCreator = query[0].memberCreator.username;
+                                                if (query[0].memberCreator !== undefined) {
+
+                                                    if (query[0].memberCreator.fullName !== undefined) {
+                                                        memberCreator = query[0].memberCreator.fullName + ' (' + query[0].memberCreator.username + ')';
+                                                    } else {
+                                                        memberCreator = query[0].memberCreator.username;
+                                                    }
+                                                    datetimeCreated = new Date(query[0].date);
                                                 }
-                                                
-                                                datetimeCreated = new Date(query[0].date);
+
                                             } else {
                                                 //use the API to get the action created method
                                                 var actionCreateCard = getCreateCardAction(idBoard, card.id);
@@ -1312,11 +1332,11 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                 break;
 
             case 'MD':
-                createMarkdownExport(jsonComputedCards, true);
+                createMarkdownExport(jsonComputedCards, true, true);
                 break;
 
             case 'HTML':
-                createHTMLExport(jsonComputedCards);
+                createHTMLExport(jsonComputedCards, bckHTMLCardInfo);
                 break;
 
             case 'OPML':
@@ -1561,9 +1581,11 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
         bookSST: true,
         type: 'binary'
     });
-    saveAs(new Blob([s2ab(wbout)], {
+    var blob = new Blob([s2ab(wbout)], {
         type: "application/octet-stream"
-    }), fileName);
+    });
+    console.log('saving BLOB ' + blob);
+    saveAs(blob, fileName);
 
     console.log('Done exporting ' + fileName);
 
@@ -1574,7 +1596,7 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
     });
 }
 
-function createMarkdownExport(jsonComputedCards, bPrint) {
+function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo) {
     console.log('TrelloExport exporting to Markdown ' + jsonComputedCards.length + ' cards...');
 
     // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));
@@ -1597,9 +1619,19 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
             prevList = card.listName;
         }
 
-        mdOut += '### [' + card.cardID + '] ' + card.title.trim() + '\n\n' +
-            '**Created:** ' + card.datetimeCreated + '\n\n' +
-            '**Created by:** ' + card.memberCreator + '\n\n' +
+        var sTitle = '';
+        if (!bPrint) {
+            // HTML export: add link to card
+            sTitle = '### [ <a target="_blank" href="' + card.shortLink + '">' + card.cardID + '</a> ] ' + card.title.trim() + '\n\n';
+        } else {
+            sTitle = '### [' + card.cardID + '] ' + card.title.trim() + '\n\n';
+        }
+        if(bckHTMLCardInfo) {
+            sTitle += '**Created:** ' + card.datetimeCreated + '\n\n' +
+                      '**Created by:** ' + card.memberCreator + '\n\n';
+        }
+
+        mdOut += sTitle +
             (card.due !== '' ? '**Due:** ' + new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : '') + '\n\n' +
             (card.datetimeDone !== '' ? '**Completed:** ' + card.datetimeDone + '\n\n' : '') +
             (card.memberDone !== '' ? '**Completed by:** ' + card.memberDone + '\n\n' : '') +
@@ -1666,11 +1698,11 @@ function createMarkdownExport(jsonComputedCards, bPrint) {
     });
 }
 
-function createHTMLExport(jsonComputedCards) {
-    var md = createMarkdownExport(jsonComputedCards, false);
+function createHTMLExport(jsonComputedCards, bckHTMLCardInfo) {
+    var md = createMarkdownExport(jsonComputedCards, false, bckHTMLCardInfo);
     var converter = new showdown.Converter();
     html = converter.makeHtml(html_encode(md));
-    var htmlBody = '<!DOCTYPE html>\r\n<html><head><link rel="stylesheet" href="http://trapias.github.io/assets/TrelloExport/default.css"></head><body class="TrelloExport">\r\n' + html + '\r\n</body></html>';
+    var htmlBody = '<!DOCTYPE html>\r\n<html><head><link type="text/css" rel="stylesheet" href="http://trapias.github.io/assets/TrelloExport/default.css"></head><body class="TrelloExport">\r\n' + html + '\r\n</body></html>';
 
     var now = new Date();
     var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".html";

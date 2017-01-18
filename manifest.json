@@ -1,6 +1,6 @@
 {
     "name": "TrelloExport",
-    "version": "1.9.30",
+    "version": "1.9.31",
     "manifest_version": 2,
 
     "description": "Export Trello Boards to Excel, Markdown, HTML and OPML",

@@ -11,6 +11,13 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.31:
+
+Bugfix release:
+
+- fix due date format in Excel export (issue #12)
+- fix missing export of archived cards (issue #13)
+
 ### Version 1.9.30:
 
 New CSS and options to format HTML exported files.

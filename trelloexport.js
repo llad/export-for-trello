@@ -119,14 +119,17 @@
 * Whatsnew for v. 1.9.30:
     - fix 1.9.29 beta
     - finalize new css for HTML exports
- */
+* Whatsnew for v. 1.9.31:
+    - fix due date format in Excel export (issue #12)
+    - fix missing export of archived cards (issue #13)
+*/
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
  * (c) 2012 Steven Levithan <http://slevithan.com/>
  * MIT license
  */
-var VERSION = '1.9.30';
+var VERSION = '1.9.31';
 
 if (!String.prototype.codePointAt) {
     String.prototype.codePointAt = function(pos) {
@@ -945,8 +948,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                         do {
                             readCards = 0;
                             $.ajax({
-                                    // checklists=all&
-                                    url: "https://trello.com/1/lists/" + list_id + "/cards?fields=all&checklists=all&members=true&member_fields=all&membersInvited=all&organization=true&organization_fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&attachments=true&limit=" + pageSize + "&before=" + sBefore,
+                                    url: "https://trello.com/1/lists/" + list_id + "/cards?filter=all&fields=all&checklists=all&members=true&member_fields=all&membersInvited=all&organization=true&organization_fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&attachments=true&limit=" + pageSize + "&before=" + sBefore,
                                     async: false,
                                 })
                                 .done(function(datacards) {
@@ -1449,7 +1451,7 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
                 card.points_consumed,
                 card.datetimeCreated,
                 card.memberCreator,
-                card.due,
+                (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
                 card.datetimeDone,
                 card.memberDone,
                 card.completionTime,

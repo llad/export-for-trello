@@ -11,6 +11,15 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.32:
+
+Enhancements:
+
+- hopefully fixed bug with member fullName reading
+- new option to export labels and members to Excel rows, like already available for checklist items (issue #15 https://github.com/trapias/TrelloExport/issues/15)
+- new option to show attached images inline for Markdown and HTML exports (issue #16 https://github.com/trapias/TrelloExport/issues/16)
+
+
 ### Version 1.9.31:
 
 Bugfix release:

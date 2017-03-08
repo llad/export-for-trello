@@ -122,15 +122,19 @@
 * Whatsnew for v. 1.9.31:
     - fix due date format in Excel export (issue #12)
     - fix missing export of archived cards (issue #13)
+* Whatsnew for v. 1.9.32:
+    - hopefully fixed bug with member fullName reading
+    - new option to export labels and members to Excel rows, like already available for checklist items (issue #15 https://github.com/trapias/TrelloExport/issues/15)
+    - new option to show attached images inline for Markdown and HTML exports (issue #16 https://github.com/trapias/TrelloExport/issues/16)
 */
+
+var VERSION = '1.9.32';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
  * (c) 2012 Steven Levithan <http://slevithan.com/>
  * MIT license
  */
-var VERSION = '1.9.31';
-
 if (!String.prototype.codePointAt) {
     String.prototype.codePointAt = function(pos) {
         pos = isNaN(pos) ? 0 : pos;
@@ -455,8 +459,8 @@ function TrelloExportOptions() {
         '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td>Export:</td><td><input type="checkbox" id="exportArchived" title="Export archived cards">Archived cards ' +
         '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments</td></tr>' +
-        '<tr id="cklAsRowsRow"><td>Checklist items as rows</td><td><input type="checkbox" id="cklAsRows" title="Checklist items as rows"></td></tr>' +
-        '<tr id="ckHTMLCardInfoRow" style="display:none"><td>Export card info (created, createdby):</td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Checklist items as rows"></td></tr>' +
+        '<tr id="cklAsRowsRow"><td>Create one Excel row per each:</td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
+        '<tr id="ckHTMLCardInfoRow" style="display:none"><td>Options:</td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images</td></tr>' +
         '<tr><td>Done lists name:</td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
         '<tr><td>Type of export:</td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr></table>';
@@ -474,17 +478,20 @@ function TrelloExportOptions() {
 
                         nameListDone = $('#setnameListDone').val();
                         var mode = $('#exportmode').val();
-                        var sfilterListsNames, filters, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows, bckHTMLCardInfo;
+                        var sfilterListsNames, filters, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages;
                         bexportArchived = $('#exportArchived').is(':checked');
                         bExportComments = $('#comments').is(':checked');
                         bExportChecklists = $('#checklists').is(':checked');
                         bExportAttachments = $('#attachments').is(':checked');
-                        bcklAsRows = $('#cklAsRows').is(':checked');
+                        iExcelItemsAsRows = 0;
+                        iExcelItemsAsRows = $('input[name=asrows]:checked').val();
                         bckHTMLCardInfo = $('#ckHTMLCardInfo').is(':checked');
-                        if (!bExportChecklists) {
-                            bcklAsRows = false;
-                        }
+                        bchkHTMLInlineImages = $('#chkHTMLInlineImages').is(':checked');
 
+                        if (!bExportChecklists && iExcelItemsAsRows.toString() === '1') {
+                            // checklist items as rows only available if checklists are exported
+                            iExcelItemsAsRows = 0;
+                        }
                         // export type
                         var sexporttype = $('#exporttype').val();
                         switch (sexporttype) {
@@ -552,7 +559,7 @@ function TrelloExportOptions() {
 
                         // launch export
                         setTimeout(function() {
-                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows, bckHTMLCardInfo);
+                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages);
                         }, 500);
                         return true;
                     }
@@ -838,7 +845,7 @@ function extractFloat(str, regex, groupIndex) {
 }
 
 
-function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, bcklAsRows, bckHTMLCardInfo) {
+function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages) {
     console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
 
     var promLoadData = new Promise(
@@ -954,8 +961,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                 .done(function(datacards) {
 
                                     readCards = datacards.length;
-
-                                    console.log('evaluating ' + datacards.length + ' cards');
+                                    //console.log('evaluating ' + datacards.length + ' cards');
 
                                     // Iterate through each card and transform data as needed
                                     $.each(datacards, function(i, card) {
@@ -1131,7 +1137,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 jsonComment.date = d;
                                                                 jsonComment.text = action.data.text;
                                                                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
-                                                                if (action.memberCreator) {
+                                                                if (action.memberCreator !== undefined) {
                                                                     jsonComment.memberCreator = action.memberCreator;
                                                                     if (jsonComment.memberCreator.fullName === undefined) {
                                                                         jsonComment.memberCreator.fullName = jsonComment.memberCreator.username;
@@ -1182,7 +1188,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             } else {
                                                 //use the API to get the action created method
                                                 var actionCreateCard = getCreateCardAction(idBoard, card.id);
-                                                if (actionCreateCard) {
+                                                if (actionCreateCard && actionCreateCard.memberCreator !== undefined) {
                                                     memberCreator = (actionCreateCard.memberCreator.fullName !== undefined ? actionCreateCard.memberCreator.fullName : actionCreateCard.memberCreator.username);
                                                     datetimeCreated = new Date(actionCreateCard.date);
                                                 } else {
@@ -1216,12 +1222,12 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                             return x.date;
                                                         })
                                                         .ToArray();
-                                                    if (query.length > 0) {
+                                                    if (query.length > 0 && query[0].memberCreator !== undefined) {
                                                         memberDone = (query[0].memberCreator.fullName !== undefined ? query[0].memberCreator.fullName : query[0].memberCreator.username);
                                                         datetimeDone = query[0].date;
                                                     } else {
                                                         var actionMoveCard = getMoveCardAction(idBoard, card.id, allnameListDone[nd].trim());
-                                                        if (actionMoveCard) {
+                                                        if (actionMoveCard && actionMoveCard.memberCreator !== undefined) {
                                                             memberDone = (actionMoveCard.memberCreator.fullName !== undefined ? actionMoveCard.memberCreator.fullName : actionMoveCard.memberCreator.username);
                                                             datetimeDone = actionMoveCard.date;
                                                         } else {
@@ -1277,7 +1283,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'completionTime': completionTime,
                                                 'completionTimeText': completionTimeText,
                                                 'memberInitials': memberInitials.toString(),
-                                                'labels': labels.toString(),
+                                                'labels': labels, //.toString(),
                                                 'isArchived': isArchived,
                                                 'jsonCheckLists': jsonCheckLists,
                                                 'jsonComments': jsonComments,
@@ -1330,15 +1336,15 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
         switch (exportFormat) {
 
             case 'XLSX':
-                createExcelExport(jsonComputedCards, bcklAsRows);
+                createExcelExport(jsonComputedCards, iExcelItemsAsRows);
                 break;
 
             case 'MD':
-                createMarkdownExport(jsonComputedCards, true, true);
+                createMarkdownExport(jsonComputedCards, true, true, bchkHTMLInlineImages);
                 break;
 
             case 'HTML':
-                createHTMLExport(jsonComputedCards, bckHTMLCardInfo);
+                createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages);
                 break;
 
             case 'OPML':
@@ -1369,8 +1375,10 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
 }
 
-function createExcelExport(jsonComputedCards, bcklAsRows) {
+// createExcelExport: export to XLSX
+function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
     console.log('TrelloExport exporting to Excel ' + jsonComputedCards.length + ' cards...');
+    console.log('iExcelItemsAsRows: ' + iExcelItemsAsRows);
 
     var columnHeadings = [
         'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
@@ -1379,18 +1387,6 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
         'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
         'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
     ];
-
-    if (bcklAsRows) {
-        // checklist items as rows
-        columnHeadings = [
-            'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
-            'Total Checklist items', 'Completed Checklist items', 'Checklist',
-            'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
-            'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
-            'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
-            'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
-        ];
-    }
 
     // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));
 
@@ -1429,95 +1425,14 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
             });
         });
 
-        if (!bcklAsRows) {
-            // standard checklist export
-
-            toStringArray = [
-                card.boardName,
-                card.listName,
-                card.cardID,
-                card.title,
-                card.shortLink,
-                card.cardDescription,
-                nTotalCheckListItems,
-                nTotalCheckListItemsCompleted,
-                card.checkLists,
-                card.comments,
-                card.attachments,
-                card.votes,
-                card.spent,
-                card.estimate,
-                card.points_estimate,
-                card.points_consumed,
-                card.datetimeCreated,
-                card.memberCreator,
-                (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
-                card.datetimeDone,
-                card.memberDone,
-                card.completionTime,
-                card.memberInitials,
-                card.labels
-                // ,card.isArchived
-            ];
-
-            if (card.isArchived) {
-                var rArch = wArchived.data.push([]) - 1;
-                wArchived.data[rArch] = toStringArray;
-            } else {
-                var r = w.data.push([]) - 1;
-                w.data[r] = toStringArray;
-            }
-
-        } else {
-            // checklist items as rows
-            if (card.jsonCheckLists.length > 0) {
-
-                card.jsonCheckLists.forEach(function(list) {
-                    list.items.forEach(function(it) {
-                        toStringArray = [
-                            card.boardName,
-                            card.listName,
-                            card.cardID,
-                            card.title,
-                            card.shortLink,
-                            card.cardDescription,
-                            nTotalCheckListItems,
-                            nTotalCheckListItemsCompleted,
-                            list.name,
-                            it.name,
-                            it.completed,
-                            it.completedDate,
-                            it.completedBy,
-                            card.comments,
-                            card.attachments,
-                            card.votes,
-                            card.spent,
-                            card.estimate,
-                            card.points_estimate,
-                            card.points_consumed,
-                            card.datetimeCreated,
-                            card.memberCreator,
-                            card.due,
-                            card.datetimeDone,
-                            card.memberDone,
-                            card.completionTime,
-                            card.memberInitials,
-                            card.labels
-                            // ,card.isArchived
-                        ];
-                        if (card.isArchived) {
-                            var rArch2 = wArchived.data.push([]) - 1;
-                            wArchived.data[rArch2] = toStringArray;
-                        } else {
-                            var r2 = w.data.push([]) - 1;
-                            w.data[r2] = toStringArray;
-                        }
-
-                    });
-                });
-
-            } else {
-                // no checklist items
+        // iExcelItemsAsRows: 
+        // 0=default
+        // 1=checklist items as rows
+        // 2=labels as rows
+        // 3=members as rows
+        switch (Number(iExcelItemsAsRows)) {
+            case 0:
+                // standard checklist export
                 toStringArray = [
                     card.boardName,
                     card.listName,
@@ -1527,11 +1442,7 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
                     card.cardDescription,
                     nTotalCheckListItems,
                     nTotalCheckListItemsCompleted,
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
+                    card.checkLists,
                     card.comments,
                     card.attachments,
                     card.votes,
@@ -1541,22 +1452,312 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
                     card.points_consumed,
                     card.datetimeCreated,
                     card.memberCreator,
-                    card.due,
+                    (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
                     card.datetimeDone,
                     card.memberDone,
                     card.completionTime,
                     card.memberInitials,
-                    card.labels
+                    card.labels.toString()
                     // ,card.isArchived
                 ];
+
                 if (card.isArchived) {
-                    var rArch2 = wArchived.data.push([]) - 1;
-                    wArchived.data[rArch2] = toStringArray;
+                    var rArch = wArchived.data.push([]) - 1;
+                    wArchived.data[rArch] = toStringArray;
                 } else {
-                    var r2 = w.data.push([]) - 1;
-                    w.data[r2] = toStringArray;
+                    var r = w.data.push([]) - 1;
+                    w.data[r] = toStringArray;
                 }
-            }
+                break;
+
+            case 1:
+                // checklist items as rows
+                columnHeadings = [
+                    'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                    'Total Checklist items', 'Completed Checklist items', 'Checklist',
+                    'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
+                    'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+                    'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
+                    'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
+                ];
+
+                if (card.jsonCheckLists.length > 0) {
+
+                    card.jsonCheckLists.forEach(function(list) {
+                        list.items.forEach(function(it) {
+                            toStringArray = [
+                                card.boardName,
+                                card.listName,
+                                card.cardID,
+                                card.title,
+                                card.shortLink,
+                                card.cardDescription,
+                                nTotalCheckListItems,
+                                nTotalCheckListItemsCompleted,
+                                list.name,
+                                it.name,
+                                it.completed,
+                                it.completedDate,
+                                it.completedBy,
+                                card.comments,
+                                card.attachments,
+                                card.votes,
+                                card.spent,
+                                card.estimate,
+                                card.points_estimate,
+                                card.points_consumed,
+                                card.datetimeCreated,
+                                card.memberCreator,
+                                card.due,
+                                card.datetimeDone,
+                                card.memberDone,
+                                card.completionTime,
+                                card.memberInitials,
+                                card.labels.toString()
+                                // ,card.isArchived
+                            ];
+                            if (card.isArchived) {
+                                var rArch2 = wArchived.data.push([]) - 1;
+                                wArchived.data[rArch2] = toStringArray;
+                            } else {
+                                var r2 = w.data.push([]) - 1;
+                                w.data[r2] = toStringArray;
+                            }
+
+                        });
+                    });
+
+                } else {
+                    // no checklist items
+                    toStringArray = [
+                        card.boardName,
+                        card.listName,
+                        card.cardID,
+                        card.title,
+                        card.shortLink,
+                        card.cardDescription,
+                        nTotalCheckListItems,
+                        nTotalCheckListItemsCompleted,
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        card.comments,
+                        card.attachments,
+                        card.votes,
+                        card.spent,
+                        card.estimate,
+                        card.points_estimate,
+                        card.points_consumed,
+                        card.datetimeCreated,
+                        card.memberCreator,
+                        card.due,
+                        card.datetimeDone,
+                        card.memberDone,
+                        card.completionTime,
+                        card.memberInitials,
+                        card.labels.toString()
+                        // ,card.isArchived
+                    ];
+                    if (card.isArchived) {
+                        var rArch2 = wArchived.data.push([]) - 1;
+                        wArchived.data[rArch2] = toStringArray;
+                    } else {
+                        var r2 = w.data.push([]) - 1;
+                        w.data[r2] = toStringArray;
+                    }
+                }
+                break;
+
+            case 2:
+                // 2=labels as rows
+                columnHeadings = [
+                    'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                    'Total Checklist items', 'Completed Checklist items', 'Checklists',
+                    'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+                    'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
+                    'Done', 'DoneBy', 'DoneTime', 'Members', 'Label'
+                ];
+
+                if (card.labels.length > 0) {
+
+                    card.labels.forEach(function(lbl) {
+                        toStringArray = [
+                            card.boardName,
+                            card.listName,
+                            card.cardID,
+                            card.title,
+                            card.shortLink,
+                            card.cardDescription,
+                            nTotalCheckListItems,
+                            nTotalCheckListItemsCompleted,
+                            card.checkLists,
+                            card.comments,
+                            card.attachments,
+                            card.votes,
+                            card.spent,
+                            card.estimate,
+                            card.points_estimate,
+                            card.points_consumed,
+                            card.datetimeCreated,
+                            card.memberCreator,
+                            (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
+                            card.datetimeDone,
+                            card.memberDone,
+                            card.completionTime,
+                            card.memberInitials,
+                            lbl
+                        ];
+
+                        if (card.isArchived) {
+                            var rArch2 = wArchived.data.push([]) - 1;
+                            wArchived.data[rArch2] = toStringArray;
+                        } else {
+                            var r2 = w.data.push([]) - 1;
+                            w.data[r2] = toStringArray;
+                        }
+
+                    });
+
+                } else {
+                    // no labels
+                    toStringArray = [
+                        card.boardName,
+                        card.listName,
+                        card.cardID,
+                        card.title,
+                        card.shortLink,
+                        card.cardDescription,
+                        nTotalCheckListItems,
+                        nTotalCheckListItemsCompleted,
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        card.comments,
+                        card.attachments,
+                        card.votes,
+                        card.spent,
+                        card.estimate,
+                        card.points_estimate,
+                        card.points_consumed,
+                        card.datetimeCreated,
+                        card.memberCreator,
+                        card.due,
+                        card.datetimeDone,
+                        card.memberDone,
+                        card.completionTime,
+                        card.memberInitials,
+                        card.labels.toString()
+                    ];
+                    if (card.isArchived) {
+                        var lblrArch2 = wArchived.data.push([]) - 1;
+                        wArchived.data[lblrArch2] = toStringArray;
+                    } else {
+                        var lblr2 = w.data.push([]) - 1;
+                        w.data[lblr2] = toStringArray;
+                    }
+                }
+                break;
+
+            case 3:
+                // 3=members as rows
+                columnHeadings = [
+                    'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                    'Total Checklist items', 'Completed Checklist items', 'Checklists',
+                    'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+                    'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
+                    'Done', 'DoneBy', 'DoneTime', 'Member', 'Labels'
+                ];
+
+                if (card.memberInitials.length > 0) {
+
+                    card.memberInitials.split(",").forEach(function(mbm) {
+
+                            toStringArray = [
+                                card.boardName,
+                                card.listName,
+                                card.cardID,
+                                card.title,
+                                card.shortLink,
+                                card.cardDescription,
+                                nTotalCheckListItems,
+                                nTotalCheckListItemsCompleted,
+                                card.checkLists,
+                                card.comments,
+                                card.attachments,
+                                card.votes,
+                                card.spent,
+                                card.estimate,
+                                card.points_estimate,
+                                card.points_consumed,
+                                card.datetimeCreated,
+                                card.memberCreator,
+                                (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
+                                card.datetimeDone,
+                                card.memberDone,
+                                card.completionTime,
+                                mbm,
+                                card.labels.toString()
+                            ];
+
+                            if (card.isArchived) {
+                                var rArch2 = wArchived.data.push([]) - 1;
+                                wArchived.data[rArch2] = toStringArray;
+                            } else {
+                                var r2 = w.data.push([]) - 1;
+                                w.data[r2] = toStringArray;
+                            }
+
+                        });
+
+                } else {
+                    // no members
+                    toStringArray = [
+                        card.boardName,
+                        card.listName,
+                        card.cardID,
+                        card.title,
+                        card.shortLink,
+                        card.cardDescription,
+                        nTotalCheckListItems,
+                        nTotalCheckListItemsCompleted,
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        card.comments,
+                        card.attachments,
+                        card.votes,
+                        card.spent,
+                        card.estimate,
+                        card.points_estimate,
+                        card.points_consumed,
+                        card.datetimeCreated,
+                        card.memberCreator,
+                        card.due,
+                        card.datetimeDone,
+                        card.memberDone,
+                        card.completionTime,
+                        card.memberInitials,
+                        card.labels.toString()
+                    ];
+                    if (card.isArchived) {
+                        var lblrArch3 = wArchived.data.push([]) - 1;
+                        wArchived.data[lblrArch3] = toStringArray;
+                    } else {
+                        var lblr3 = w.data.push([]) - 1;
+                        w.data[lblr3] = toStringArray;
+                    }
+                }
+                break;
+
+            default:
+                console.log('DEFAULT: ' + iExcelItemsAsRows);
+                break;
         }
 
     });
@@ -1598,7 +1799,7 @@ function createExcelExport(jsonComputedCards, bcklAsRows) {
     });
 }
 
-function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo) {
+function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo, bchkHTMLInlineImages) {
     console.log('TrelloExport exporting to Markdown ' + jsonComputedCards.length + ' cards...');
 
     // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));
@@ -1628,9 +1829,9 @@ function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo) {
         } else {
             sTitle = '### [' + card.cardID + '] ' + card.title.trim() + '\n\n';
         }
-        if(bckHTMLCardInfo) {
+        if (bckHTMLCardInfo) {
             sTitle += '**Created:** ' + card.datetimeCreated + '\n\n' +
-                      '**Created by:** ' + card.memberCreator + '\n\n';
+                '**Created by:** ' + card.memberCreator + '\n\n';
         }
 
         mdOut += sTitle +
@@ -1674,7 +1875,20 @@ function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo) {
         if (card.jsonAttachments.length > 0) {
             mdOut += '#### Attachments\n';
             for (i = 0; i < card.jsonAttachments.length; i++) {
-                mdOut += '**' + card.jsonAttachments[i].name + '** (' + Number(card.jsonAttachments[i].bytes / 1024).toFixed(2) + ' kb) [download](' + card.jsonAttachments[i].url + ')\n\n';
+
+                // console.log('ATTACHMENT = ' + JSON.stringify(card.jsonAttachments[i]) );
+                if( bchkHTMLInlineImages && isImage(card.jsonAttachments[i].name)) {
+                    
+                    var sImg = '![' + card.jsonAttachments[i].name + '](' + card.jsonAttachments[i].url + ')';
+
+                    mdOut += '**' + card.jsonAttachments[i].name + '** (' + Number(card.jsonAttachments[i].bytes / 1024).toFixed(2) + ' kb) [download](' + card.jsonAttachments[i].url + ')\n\n' + sImg + '\n\n';
+
+                } else {
+
+                    mdOut += '**' + card.jsonAttachments[i].name + '** (' + Number(card.jsonAttachments[i].bytes / 1024).toFixed(2) + ' kb) [download](' + card.jsonAttachments[i].url + ')\n\n';
+
+                }
+
             }
         }
 
@@ -1700,8 +1914,13 @@ function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo) {
     });
 }
 
-function createHTMLExport(jsonComputedCards, bckHTMLCardInfo) {
-    var md = createMarkdownExport(jsonComputedCards, false, bckHTMLCardInfo);
+function isImage(name) {
+    name = name.toLowerCase();
+    return (name.endsWith("jpg") || name.endsWith("jpeg") || name.endsWith("png"));
+}
+
+function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages) {
+    var md = createMarkdownExport(jsonComputedCards, false, bckHTMLCardInfo, bchkHTMLInlineImages);
     var converter = new showdown.Converter();
     html = converter.makeHtml(html_encode(md));
     var htmlBody = '<!DOCTYPE html>\r\n<html><head><link type="text/css" rel="stylesheet" href="http://trapias.github.io/assets/TrelloExport/default.css"></head><body class="TrelloExport">\r\n' + html + '\r\n</body></html>';

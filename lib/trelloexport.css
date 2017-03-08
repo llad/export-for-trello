@@ -12,3 +12,13 @@
 .TrelloExport h3 {
 	color: blue;
 }
+
+label{
+	display: inline-block !important;
+	font-weight: normal !important;
+}
+
+input:checked + label {
+	// font-weight: bold !important;
+	text-decoration: underline;
+}

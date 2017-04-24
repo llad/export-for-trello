@@ -12,6 +12,15 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 ## Release history
 
 
+### Version 1.9.34:
+
+Released 04/24/2017:
+
+- only show columns chooser for Excel exports
+- can now set a custom css for HTML export
+- can now check/uncheck all columns to export
+
+
 ### Version 1.9.33:
 
 Released 04/24/2017:

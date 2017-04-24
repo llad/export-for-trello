@@ -130,8 +130,12 @@
     - new data field dateLastActivity exported (issue #18)
     - new data field numberOfComments exported (issue #19)
     - new option to choose which columns to export to Excel (issue #17)
+* Whatsnew for v. 1.9.34:
+    - only show columns chooser for Excel exports
+    - can now set a custom css for HTML export
+    - can now check/uncheck all columns to export
 */
-var VERSION = '1.9.33';
+var VERSION = '1.9.34';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -483,7 +487,8 @@ function TrelloExportOptions() {
         '<td><select multiple="multiple" id="selectedColumns">' + options.join('') + '</select></td>' +
         // '<td>' + options.join('') + '</td>' +
         '</tr>' +
-        '<tr id="ckHTMLCardInfoRow" style="display:none"><td>Options:</td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images</td></tr>' +
+        '<tr id="ckHTMLCardInfoRow" style="display:none"><td>Options:</td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images' +
+        '<br/>Stylesheet: <input id="trelloExportCss" type="text" name="css" value="http://trapias.github.io/assets/TrelloExport/default.css"> ' + '</td></tr>' +
         '<tr><td>Done lists name:</td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
         '<tr><td>Type of export:</td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr></table>';
@@ -585,9 +590,11 @@ function TrelloExportOptions() {
                             selectedColumns.push(this.value);
                         });
 
+                        var css = $('#trelloExportCss').val();
+
                         // launch export
                         setTimeout(function() {
-                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns);
+                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css);
                         }, 500);
                         return true;
                     }
@@ -605,7 +612,7 @@ function TrelloExportOptions() {
     dlgReady.then(function() {
 
 
-        $('#selectedColumns').multiselect();
+        $('#selectedColumns').multiselect({ includeSelectAllOption: true });
 
         $('#exporttype').on('change', function() {
             var sexporttype = $('#exporttype').val();
@@ -652,10 +659,12 @@ function TrelloExportOptions() {
             var mode = $('#exportmode').val();
             $('#cklAsRowsRow').hide();
             $('#ckHTMLCardInfoRow').hide();
+            $('#xlsColumns').hide();
 
             switch (mode) {
                 case 'XLSX':
                     $('#cklAsRowsRow').show();
+                    $('#xlsColumns').show();
                     break;
                 case 'HTML':
                 case 'MD':
@@ -746,7 +755,7 @@ function setColumnHeadings(asrowsMode) {
         .remove()
         .end()
         .append(options.join(''))
-        .multiselect();
+        .multiselect({ includeSelectAllOption: true });
 }
 
 function resetOptions() {
@@ -938,7 +947,7 @@ function extractFloat(str, regex, groupIndex) {
 }
 
 
-function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns) {
+function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css) {
     console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
 
     var promLoadData = new Promise(
@@ -1444,7 +1453,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                 break;
 
             case 'HTML':
-                createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages);
+                createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css);
                 break;
 
             case 'OPML':
@@ -2668,11 +2677,15 @@ function isImage(name) {
     return (name.endsWith("jpg") || name.endsWith("jpeg") || name.endsWith("png"));
 }
 
-function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages) {
+function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css) {
     var md = createMarkdownExport(jsonComputedCards, false, bckHTMLCardInfo, bchkHTMLInlineImages);
     var converter = new showdown.Converter();
     html = converter.makeHtml(html_encode(md));
-    var htmlBody = '<!DOCTYPE html>\r\n<html><head><link type="text/css" rel="stylesheet" href="http://trapias.github.io/assets/TrelloExport/default.css"></head><body class="TrelloExport">\r\n' + html + '\r\n</body></html>';
+
+    if (css === undefined || css === '' || css === null) {
+        css = 'http://trapias.github.io/assets/TrelloExport/default.css';
+    }
+    var htmlBody = '<!DOCTYPE html>\r\n<html><head><link type="text/css" rel="stylesheet" href="' + css + '"></head><body class="TrelloExport">\r\n' + html + '\r\n</body></html>';
 
     var now = new Date();
     var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".html";

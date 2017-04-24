@@ -126,9 +126,12 @@
     - hopefully fixed bug with member fullName reading
     - new option to export labels and members to Excel rows, like already available for checklist items (issue #15 https://github.com/trapias/TrelloExport/issues/15)
     - new option to show attached images inline for Markdown and HTML exports (issue #16 https://github.com/trapias/TrelloExport/issues/16)
+* Whatsnew for v. 1.9.33:
+    - new data field dateLastActivity exported (issue #18)
+    - new data field numberOfComments exported (issue #19)
+    - new option to choose which columns to export to Excel (issue #17)
 */
-
-var VERSION = '1.9.32';
+var VERSION = '1.9.33';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -455,11 +458,31 @@ function TrelloExportOptions() {
     }
     idBoard = parts[1];
 
+    var columnHeadings = [
+        'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+        'Total Checklist items', 'Completed Checklist items', 'Checklists',
+        'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+        'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
+        'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
+    ];
+
+    // https://github.com/davidstutz/bootstrap-multiselect
+    var options = [];
+    for (var x = 0; x < columnHeadings.length; x++) {
+        var o = '<option value="' + columnHeadings[x] + '" selected="true">' + columnHeadings[x] + '</option>';
+        options.push(o);
+    }
+
     var sDialog = '<table id="optionslist">' +
         '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td>Export:</td><td><input type="checkbox" id="exportArchived" title="Export archived cards">Archived cards ' +
         '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments</td></tr>' +
         '<tr id="cklAsRowsRow"><td>Create one Excel row per each:</td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
+        '<tr id="xlsColumns">' +
+        '<td>Export columns</td>' +
+        '<td><select multiple="multiple" id="selectedColumns">' + options.join('') + '</select></td>' +
+        // '<td>' + options.join('') + '</td>' +
+        '</tr>' +
         '<tr id="ckHTMLCardInfoRow" style="display:none"><td>Options:</td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images</td></tr>' +
         '<tr><td>Done lists name:</td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
         '<tr><td>Type of export:</td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
@@ -555,11 +578,16 @@ function TrelloExportOptions() {
                                 break;
                         }
 
-                        // console.log('datalimit=' + dataLimit + ', sexporttype=' + sexporttype + ', exportlists=' + exportlists);
+                        var allColumns = $('#selectedColumns option');
+                        var selectedColumns = [];
+                        var selectedOptions = $('#selectedColumns option:selected');
+                        selectedOptions.each(function() {
+                            selectedColumns.push(this.value);
+                        });
 
                         // launch export
                         setTimeout(function() {
-                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages);
+                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns);
                         }, 500);
                         return true;
                     }
@@ -575,6 +603,9 @@ function TrelloExportOptions() {
         });
 
     dlgReady.then(function() {
+
+
+        $('#selectedColumns').multiselect();
 
         $('#exporttype').on('change', function() {
             var sexporttype = $('#exporttype').val();
@@ -637,6 +668,7 @@ function TrelloExportOptions() {
 
         });
 
+        $('#cklAsRows').attr('disabled', true); //  default
         $('#checklists').on('change', function() {
             var ecl = $('#checklists').is(':checked');
             if (!ecl) {
@@ -645,7 +677,10 @@ function TrelloExportOptions() {
             } else {
                 $('#cklAsRows').attr('disabled', false);
             }
+        });
 
+        $('input[name=asrows]').change(function() {
+            setColumnHeadings(this.value);
         });
 
         // todo: show progress
@@ -654,6 +689,64 @@ function TrelloExportOptions() {
     });
 
     return; // close dialog
+}
+
+function setColumnHeadings(asrowsMode) {
+    var columnHeadings = [];
+    switch (Number(asrowsMode)) {
+        case 1: // checklist item
+            columnHeadings = [
+                'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                'Total Checklist items', 'Completed Checklist items', 'Checklist',
+                'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
+                'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+                'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
+                'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
+            ];
+            break;
+        case 2: // label
+            columnHeadings = [
+                'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                'Total Checklist items', 'Completed Checklist items', 'Checklists',
+                'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+                'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
+                'Done', 'DoneBy', 'DoneTime', 'Members', 'Label'
+            ];
+            break;
+        case 3: // member
+            console.log('MEMBER');
+            columnHeadings = [
+                'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                'Total Checklist items', 'Completed Checklist items', 'Checklists',
+                'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+                'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
+                'Done', 'DoneBy', 'DoneTime', 'Member', 'Labels'
+            ];
+            break;
+        default:
+            // card
+            columnHeadings = [
+                'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                'Total Checklist items', 'Completed Checklist items', 'Checklists',
+                'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
+                'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
+                'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
+            ];
+            break;
+    }
+
+    var options = [];
+    for (var x = 0; x < columnHeadings.length; x++) {
+        var o = '<option value="' + columnHeadings[x] + '" selected="true">' + columnHeadings[x] + '</option>';
+        options.push(o);
+    }
+
+    $('#selectedColumns').multiselect('destroy')
+        .find('option')
+        .remove()
+        .end()
+        .append(options.join(''))
+        .multiselect();
 }
 
 function resetOptions() {
@@ -845,7 +938,7 @@ function extractFloat(str, regex, groupIndex) {
 }
 
 
-function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages) {
+function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns) {
     console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
 
     var promLoadData = new Promise(
@@ -1122,6 +1215,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 });
                                             }
 
+                                            var numberOfComments = 0;
+
                                             if (bExportComments) {
                                                 //comments
                                                 var commentsOnCard = getCommentCardActions(idBoard, card.id);
@@ -1131,6 +1226,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                     $.each(commentsOnCard, function(j, action) {
                                                         if ((action.type == "commentCard" || action.type == 'copyCommentCard')) {
                                                             if (card.id == action.data.card.id) {
+                                                                numberOfComments++;
                                                                 var jsonComment = {};
                                                                 //2013-08-08T06:57:18
                                                                 var d = new Date(action.date);
@@ -1260,6 +1356,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 isArchived = true;
                                             }
 
+                                            var dateLastActivity = new Date(card.dateLastActivity);
+
                                             var rowData = {
                                                 'boardName': boardName,
                                                 'listName': listName,
@@ -1268,6 +1366,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'shortLink': 'https://trello.com/c/' + card.shortLink,
                                                 'cardDescription': card.desc.substr(0, MAXCHARSPERCELL),
                                                 'checkLists': checkListsText.substr(0, MAXCHARSPERCELL),
+                                                'numberOfComments': numberOfComments,
                                                 'comments': commentsText.substr(0, MAXCHARSPERCELL),
                                                 'attachments': attachmentsText.substr(0, MAXCHARSPERCELL),
                                                 'votes': card.idMembersVoted.length,
@@ -1277,6 +1376,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'points_consumed': points_consumed,
                                                 'datetimeCreated': datetimeCreated,
                                                 'memberCreator': memberCreator,
+                                                'LastActivity': dateLastActivity.toLocaleDateString() + ' ' + dateLastActivity.toLocaleTimeString(),
                                                 'due': due,
                                                 'datetimeDone': datetimeDone,
                                                 'memberDone': memberDone,
@@ -1336,7 +1436,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
         switch (exportFormat) {
 
             case 'XLSX':
-                createExcelExport(jsonComputedCards, iExcelItemsAsRows);
+                createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, selectedColumns);
                 break;
 
             case 'MD':
@@ -1376,19 +1476,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 }
 
 // createExcelExport: export to XLSX
-function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
+function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, columnHeadings) {
     console.log('TrelloExport exporting to Excel ' + jsonComputedCards.length + ' cards...');
-    console.log('iExcelItemsAsRows: ' + iExcelItemsAsRows);
-
-    var columnHeadings = [
-        'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
-        'Total Checklist items', 'Completed Checklist items', 'Checklists',
-        'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
-        'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
-        'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
-    ];
-
-    // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));
 
     // prepare Workbook
     var wb = new Workbook();
@@ -1433,33 +1522,124 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
         switch (Number(iExcelItemsAsRows)) {
             case 0:
                 // standard checklist export
-                toStringArray = [
-                    card.boardName,
-                    card.listName,
-                    card.cardID,
-                    card.title,
-                    card.shortLink,
-                    card.cardDescription,
-                    nTotalCheckListItems,
-                    nTotalCheckListItemsCompleted,
-                    card.checkLists,
-                    card.comments,
-                    card.attachments,
-                    card.votes,
-                    card.spent,
-                    card.estimate,
-                    card.points_estimate,
-                    card.points_consumed,
-                    card.datetimeCreated,
-                    card.memberCreator,
-                    (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
-                    card.datetimeDone,
-                    card.memberDone,
-                    card.completionTime,
-                    card.memberInitials,
-                    card.labels.toString()
-                    // ,card.isArchived
-                ];
+
+                // toStringArray = [
+                //     card.boardName,
+                //     card.listName,
+                //     card.cardID,
+                //     card.title,
+                //     card.shortLink,
+                //     card.cardDescription,
+                //     nTotalCheckListItems,
+                //     nTotalCheckListItemsCompleted,
+                //     card.checkLists,
+                //     card.numberOfComments,
+                //     card.comments,
+                //     card.attachments,
+                //     card.votes,
+                //     card.spent,
+                //     card.estimate,
+                //     card.points_estimate,
+                //     card.points_consumed,
+                //     card.datetimeCreated,
+                //     card.memberCreator,
+                //     card.LastActivity,
+                //     (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
+                //     card.datetimeDone,
+                //     card.memberDone,
+                //     card.completionTime,
+                //     card.memberInitials,
+                //     card.labels.toString()
+                //     // ,card.isArchived
+                // ];
+
+                toStringArray = [];
+                // filter columns
+                for (var nCol = 0; nCol < allColumns.length; nCol++) {
+                    if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                        switch (nCol) {
+                            case 0:
+                                toStringArray.push(card.boardName);
+                                break;
+                            case 1:
+                                toStringArray.push(card.listName);
+                                break;
+                            case 2:
+                                toStringArray.push(card.cardID);
+                                break;
+                            case 3:
+                                toStringArray.push(card.title);
+                                break;
+                            case 4:
+                                toStringArray.push(card.shortLink);
+                                break;
+                            case 5:
+                                toStringArray.push(card.cardDescription);
+                                break;
+                            case 6:
+                                toStringArray.push(card.nTotalCheckListItems);
+                                break;
+                            case 7:
+                                toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                break;
+                            case 8:
+                                toStringArray.push(card.checkLists);
+                                break;
+                            case 9:
+                                toStringArray.push(card.numberOfComments);
+                                break;
+                            case 10:
+                                toStringArray.push(card.comments);
+                                break;
+                            case 11:
+                                toStringArray.push(card.attachments);
+                                break;
+                            case 12:
+                                toStringArray.push(card.votes);
+                                break;
+                            case 13:
+                                toStringArray.push(card.spent);
+                                break;
+                            case 14:
+                                toStringArray.push(card.estimate);
+                                break;
+                            case 15:
+                                toStringArray.push(card.points_estimate);
+                                break;
+                            case 16:
+                                toStringArray.push(card.points_consumed);
+                                break;
+                            case 17:
+                                toStringArray.push(card.datetimeCreated);
+                                break;
+                            case 18:
+                                toStringArray.push(card.memberCreator);
+                                break;
+                            case 19:
+                                toStringArray.push(card.LastActivity);
+                                break;
+                            case 20:
+                                toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                break;
+                            case 21:
+                                toStringArray.push(card.datetimeDone);
+                                break;
+                            case 22:
+                                toStringArray.push(card.memberDone);
+                                break;
+                            case 23:
+                                toStringArray.push(card.completionTime);
+                                break;
+                            case 24:
+                                toStringArray.push(card.memberInitials);
+                                break;
+                            case 25:
+                                toStringArray.push(card.labels.toString());
+                                break;
+                        }
+                    }
+                }
 
                 if (card.isArchived) {
                     var rArch = wArchived.data.push([]) - 1;
@@ -1472,50 +1652,145 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
 
             case 1:
                 // checklist items as rows
-                columnHeadings = [
-                    'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
-                    'Total Checklist items', 'Completed Checklist items', 'Checklist',
-                    'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
-                    'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
-                    'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
-                    'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
-                ];
-
                 if (card.jsonCheckLists.length > 0) {
 
                     card.jsonCheckLists.forEach(function(list) {
                         list.items.forEach(function(it) {
-                            toStringArray = [
-                                card.boardName,
-                                card.listName,
-                                card.cardID,
-                                card.title,
-                                card.shortLink,
-                                card.cardDescription,
-                                nTotalCheckListItems,
-                                nTotalCheckListItemsCompleted,
-                                list.name,
-                                it.name,
-                                it.completed,
-                                it.completedDate,
-                                it.completedBy,
-                                card.comments,
-                                card.attachments,
-                                card.votes,
-                                card.spent,
-                                card.estimate,
-                                card.points_estimate,
-                                card.points_consumed,
-                                card.datetimeCreated,
-                                card.memberCreator,
-                                card.due,
-                                card.datetimeDone,
-                                card.memberDone,
-                                card.completionTime,
-                                card.memberInitials,
-                                card.labels.toString()
-                                // ,card.isArchived
-                            ];
+
+                            // toStringArray = [
+                            //     card.boardName,
+                            //     card.listName,
+                            //     card.cardID,
+                            //     card.title,
+                            //     card.shortLink,
+                            //     card.cardDescription,
+                            //     nTotalCheckListItems,
+                            //     nTotalCheckListItemsCompleted,
+                            //     list.name,
+                            //     it.name,
+                            //     it.completed,
+                            //     it.completedDate,
+                            //     it.completedBy,
+                            //     card.numberOfComments,
+                            //     card.comments,
+                            //     card.attachments,
+                            //     card.votes,
+                            //     card.spent,
+                            //     card.estimate,
+                            //     card.points_estimate,
+                            //     card.points_consumed,
+                            //     card.datetimeCreated,
+                            //     card.memberCreator,
+                            //     card.LastActivity,
+                            //     card.due,
+                            //     card.datetimeDone,
+                            //     card.memberDone,
+                            //     card.completionTime,
+                            //     card.memberInitials,
+                            //     card.labels.toString()
+                            //     // ,card.isArchived
+                            // ];
+
+                            toStringArray = [];
+                            // filter columns
+                            for (var nCol = 0; nCol < allColumns.length; nCol++) {
+                                if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                                    switch (nCol) {
+                                        case 0:
+                                            toStringArray.push(card.boardName);
+                                            break;
+                                        case 1:
+                                            toStringArray.push(card.listName);
+                                            break;
+                                        case 2:
+                                            toStringArray.push(card.cardID);
+                                            break;
+                                        case 3:
+                                            toStringArray.push(card.title);
+                                            break;
+                                        case 4:
+                                            toStringArray.push(card.shortLink);
+                                            break;
+                                        case 5:
+                                            toStringArray.push(card.cardDescription);
+                                            break;
+                                        case 6:
+                                            toStringArray.push(card.nTotalCheckListItems);
+                                            break;
+                                        case 7:
+                                            toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                            break;
+                                        case 8:
+                                            toStringArray.push(list.name);
+                                            break;
+                                        case 9:
+                                            toStringArray.push(it.name);
+                                            break;
+                                        case 10:
+                                            toStringArray.push(it.completed);
+                                            break;
+                                        case 11:
+                                            toStringArray.push(it.completedDate);
+                                            break;
+                                        case 12:
+                                            toStringArray.push(it.completedBy);
+                                            break;
+                                        case 13:
+                                            toStringArray.push(card.numberOfComments);
+                                            break;
+                                        case 14:
+                                            toStringArray.push(card.comments);
+                                            break;
+                                        case 15:
+                                            toStringArray.push(card.attachments);
+                                            break;
+                                        case 16:
+                                            toStringArray.push(card.votes);
+                                            break;
+                                        case 17:
+                                            toStringArray.push(card.spent);
+                                            break;
+                                        case 18:
+                                            toStringArray.push(card.estimate);
+                                            break;
+                                        case 19:
+                                            toStringArray.push(card.points_estimate);
+                                            break;
+                                        case 20:
+                                            toStringArray.push(card.points_consumed);
+                                            break;
+                                        case 21:
+                                            toStringArray.push(card.datetimeCreated);
+                                            break;
+                                        case 22:
+                                            toStringArray.push(card.memberCreator);
+                                            break;
+                                        case 23:
+                                            toStringArray.push(card.LastActivity);
+                                            break;
+                                        case 24:
+                                            toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                            break;
+                                        case 25:
+                                            toStringArray.push(card.datetimeDone);
+                                            break;
+                                        case 26:
+                                            toStringArray.push(card.memberDone);
+                                            break;
+                                        case 27:
+                                            toStringArray.push(card.completionTime);
+                                            break;
+                                        case 28:
+                                            toStringArray.push(card.memberInitials);
+                                            break;
+                                        case 29:
+                                            toStringArray.push(card.labels.toString());
+                                            break;
+                                    }
+                                }
+                            }
+
                             if (card.isArchived) {
                                 var rArch2 = wArchived.data.push([]) - 1;
                                 wArchived.data[rArch2] = toStringArray;
@@ -1529,37 +1804,140 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
 
                 } else {
                     // no checklist items
-                    toStringArray = [
-                        card.boardName,
-                        card.listName,
-                        card.cardID,
-                        card.title,
-                        card.shortLink,
-                        card.cardDescription,
-                        nTotalCheckListItems,
-                        nTotalCheckListItemsCompleted,
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        card.comments,
-                        card.attachments,
-                        card.votes,
-                        card.spent,
-                        card.estimate,
-                        card.points_estimate,
-                        card.points_consumed,
-                        card.datetimeCreated,
-                        card.memberCreator,
-                        card.due,
-                        card.datetimeDone,
-                        card.memberDone,
-                        card.completionTime,
-                        card.memberInitials,
-                        card.labels.toString()
-                        // ,card.isArchived
-                    ];
+                    // toStringArray = [
+                    //     card.boardName,
+                    //     card.listName,
+                    //     card.cardID,
+                    //     card.title,
+                    //     card.shortLink,
+                    //     card.cardDescription,
+                    //     nTotalCheckListItems,
+                    //     nTotalCheckListItemsCompleted,
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     card.numberOfComments,
+                    //     card.comments,
+                    //     card.attachments,
+                    //     card.votes,
+                    //     card.spent,
+                    //     card.estimate,
+                    //     card.points_estimate,
+                    //     card.points_consumed,
+                    //     card.datetimeCreated,
+                    //     card.memberCreator,
+                    //     card.LastActivity,
+                    //     card.due,
+                    //     card.datetimeDone,
+                    //     card.memberDone,
+                    //     card.completionTime,
+                    //     card.memberInitials,
+                    //     card.labels.toString()
+                    //     // ,card.isArchived
+                    // ];
+
+                    toStringArray = [];
+                    // filter columns
+                    for (nCol = 0; nCol < allColumns.length; nCol++) {
+                        if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                            switch (nCol) {
+                                case 0:
+                                    toStringArray.push(card.boardName);
+                                    break;
+                                case 1:
+                                    toStringArray.push(card.listName);
+                                    break;
+                                case 2:
+                                    toStringArray.push(card.cardID);
+                                    break;
+                                case 3:
+                                    toStringArray.push(card.title);
+                                    break;
+                                case 4:
+                                    toStringArray.push(card.shortLink);
+                                    break;
+                                case 5:
+                                    toStringArray.push(card.cardDescription);
+                                    break;
+                                case 6:
+                                    toStringArray.push(card.nTotalCheckListItems);
+                                    break;
+                                case 7:
+                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    break;
+                                case 8:
+                                    toStringArray.push('');
+                                    break;
+                                case 9:
+                                    toStringArray.push('');
+                                    break;
+                                case 10:
+                                    toStringArray.push('');
+                                    break;
+                                case 11:
+                                    toStringArray.push('');
+                                    break;
+                                case 12:
+                                    toStringArray.push('');
+                                    break;
+                                case 13:
+                                    toStringArray.push(card.numberOfComments);
+                                    break;
+                                case 14:
+                                    toStringArray.push(card.comments);
+                                    break;
+                                case 15:
+                                    toStringArray.push(card.attachments);
+                                    break;
+                                case 16:
+                                    toStringArray.push(card.votes);
+                                    break;
+                                case 17:
+                                    toStringArray.push(card.spent);
+                                    break;
+                                case 18:
+                                    toStringArray.push(card.estimate);
+                                    break;
+                                case 19:
+                                    toStringArray.push(card.points_estimate);
+                                    break;
+                                case 20:
+                                    toStringArray.push(card.points_consumed);
+                                    break;
+                                case 21:
+                                    toStringArray.push(card.datetimeCreated);
+                                    break;
+                                case 22:
+                                    toStringArray.push(card.memberCreator);
+                                    break;
+                                case 23:
+                                    toStringArray.push(card.LastActivity);
+                                    break;
+                                case 24:
+                                    toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    break;
+                                case 25:
+                                    toStringArray.push(card.datetimeDone);
+                                    break;
+                                case 26:
+                                    toStringArray.push(card.memberDone);
+                                    break;
+                                case 27:
+                                    toStringArray.push(card.completionTime);
+                                    break;
+                                case 28:
+                                    toStringArray.push(card.memberInitials);
+                                    break;
+                                case 29:
+                                    toStringArray.push(card.labels.toString());
+                                    break;
+                            }
+                        }
+                    }
+
                     if (card.isArchived) {
                         var rArch2 = wArchived.data.push([]) - 1;
                         wArchived.data[rArch2] = toStringArray;
@@ -1572,43 +1950,126 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
 
             case 2:
                 // 2=labels as rows
-                columnHeadings = [
-                    'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
-                    'Total Checklist items', 'Completed Checklist items', 'Checklists',
-                    'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
-                    'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
-                    'Done', 'DoneBy', 'DoneTime', 'Members', 'Label'
-                ];
-
                 if (card.labels.length > 0) {
 
                     card.labels.forEach(function(lbl) {
-                        toStringArray = [
-                            card.boardName,
-                            card.listName,
-                            card.cardID,
-                            card.title,
-                            card.shortLink,
-                            card.cardDescription,
-                            nTotalCheckListItems,
-                            nTotalCheckListItemsCompleted,
-                            card.checkLists,
-                            card.comments,
-                            card.attachments,
-                            card.votes,
-                            card.spent,
-                            card.estimate,
-                            card.points_estimate,
-                            card.points_consumed,
-                            card.datetimeCreated,
-                            card.memberCreator,
-                            (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
-                            card.datetimeDone,
-                            card.memberDone,
-                            card.completionTime,
-                            card.memberInitials,
-                            lbl
-                        ];
+
+                        // toStringArray = [
+                        //     card.boardName,
+                        //     card.listName,
+                        //     card.cardID,
+                        //     card.title,
+                        //     card.shortLink,
+                        //     card.cardDescription,
+                        //     nTotalCheckListItems,
+                        //     nTotalCheckListItemsCompleted,
+                        //     card.checkLists,
+                        //     card.numberOfComments,
+                        //     card.comments,
+                        //     card.attachments,
+                        //     card.votes,
+                        //     card.spent,
+                        //     card.estimate,
+                        //     card.points_estimate,
+                        //     card.points_consumed,
+                        //     card.datetimeCreated,
+                        //     card.memberCreator,
+                        //     card.LastActivity,
+                        //     (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
+                        //     card.datetimeDone,
+                        //     card.memberDone,
+                        //     card.completionTime,
+                        //     card.memberInitials,
+                        //     lbl
+                        // ];
+
+                        toStringArray = [];
+                        // filter columns
+                        for (var nCol = 0; nCol < allColumns.length; nCol++) {
+                            if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                                switch (nCol) {
+                                    case 0:
+                                        toStringArray.push(card.boardName);
+                                        break;
+                                    case 1:
+                                        toStringArray.push(card.listName);
+                                        break;
+                                    case 2:
+                                        toStringArray.push(card.cardID);
+                                        break;
+                                    case 3:
+                                        toStringArray.push(card.title);
+                                        break;
+                                    case 4:
+                                        toStringArray.push(card.shortLink);
+                                        break;
+                                    case 5:
+                                        toStringArray.push(card.cardDescription);
+                                        break;
+                                    case 6:
+                                        toStringArray.push(card.nTotalCheckListItems);
+                                        break;
+                                    case 7:
+                                        toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                        break;
+                                    case 8:
+                                        toStringArray.push(card.checkLists);
+                                        break;
+                                    case 9:
+                                        toStringArray.push(card.numberOfComments);
+                                        break;
+                                    case 10:
+                                        toStringArray.push(card.comments);
+                                        break;
+                                    case 11:
+                                        toStringArray.push(card.attachments);
+                                        break;
+                                    case 12:
+                                        toStringArray.push(card.votes);
+                                        break;
+                                    case 13:
+                                        toStringArray.push(card.spent);
+                                        break;
+                                    case 14:
+                                        toStringArray.push(card.estimate);
+                                        break;
+                                    case 15:
+                                        toStringArray.push(card.points_estimate);
+                                        break;
+                                    case 16:
+                                        toStringArray.push(card.points_consumed);
+                                        break;
+                                    case 17:
+                                        toStringArray.push(card.datetimeCreated);
+                                        break;
+                                    case 18:
+                                        toStringArray.push(card.memberCreator);
+                                        break;
+                                    case 19:
+                                        toStringArray.push(card.LastActivity);
+                                        break;
+                                    case 20:
+                                        toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                        break;
+                                    case 21:
+                                        toStringArray.push(card.datetimeDone);
+                                        break;
+                                    case 22:
+                                        toStringArray.push(card.memberDone);
+                                        break;
+                                    case 23:
+                                        toStringArray.push(card.completionTime);
+                                        break;
+                                    case 24:
+                                        toStringArray.push(card.memberInitials);
+                                        break;
+                                    case 25:
+                                        toStringArray.push(lbl);
+                                        break;
+                                }
+                            }
+                        }
 
                         if (card.isArchived) {
                             var rArch2 = wArchived.data.push([]) - 1;
@@ -1622,36 +2083,139 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
 
                 } else {
                     // no labels
-                    toStringArray = [
-                        card.boardName,
-                        card.listName,
-                        card.cardID,
-                        card.title,
-                        card.shortLink,
-                        card.cardDescription,
-                        nTotalCheckListItems,
-                        nTotalCheckListItemsCompleted,
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        card.comments,
-                        card.attachments,
-                        card.votes,
-                        card.spent,
-                        card.estimate,
-                        card.points_estimate,
-                        card.points_consumed,
-                        card.datetimeCreated,
-                        card.memberCreator,
-                        card.due,
-                        card.datetimeDone,
-                        card.memberDone,
-                        card.completionTime,
-                        card.memberInitials,
-                        card.labels.toString()
-                    ];
+                    // toStringArray = [
+                    //     card.boardName,
+                    //     card.listName,
+                    //     card.cardID,
+                    //     card.title,
+                    //     card.shortLink,
+                    //     card.cardDescription,
+                    //     nTotalCheckListItems,
+                    //     nTotalCheckListItemsCompleted,
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     card.comments,
+                    //     card.numberOfComments,
+                    //     card.attachments,
+                    //     card.votes,
+                    //     card.spent,
+                    //     card.estimate,
+                    //     card.points_estimate,
+                    //     card.points_consumed,
+                    //     card.datetimeCreated,
+                    //     card.memberCreator,
+                    //     card.LastActivity,
+                    //     card.due,
+                    //     card.datetimeDone,
+                    //     card.memberDone,
+                    //     card.completionTime,
+                    //     card.memberInitials,
+                    //     card.labels.toString()
+                    // ];
+
+                    toStringArray = [];
+                    // filter columns
+                    for (nCol = 0; nCol < allColumns.length; nCol++) {
+                        if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                            switch (nCol) {
+                                case 0:
+                                    toStringArray.push(card.boardName);
+                                    break;
+                                case 1:
+                                    toStringArray.push(card.listName);
+                                    break;
+                                case 2:
+                                    toStringArray.push(card.cardID);
+                                    break;
+                                case 3:
+                                    toStringArray.push(card.title);
+                                    break;
+                                case 4:
+                                    toStringArray.push(card.shortLink);
+                                    break;
+                                case 5:
+                                    toStringArray.push(card.cardDescription);
+                                    break;
+                                case 6:
+                                    toStringArray.push(card.nTotalCheckListItems);
+                                    break;
+                                case 7:
+                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    break;
+                                case 8:
+                                    toStringArray.push('');
+                                    break;
+                                case 9:
+                                    toStringArray.push('');
+                                    break;
+                                case 10:
+                                    toStringArray.push('');
+                                    break;
+                                case 11:
+                                    toStringArray.push('');
+                                    break;
+                                case 12:
+                                    toStringArray.push('');
+                                    break;
+                                case 13:
+                                    toStringArray.push(card.numberOfComments);
+                                    break;
+                                case 14:
+                                    toStringArray.push(card.comments);
+                                    break;
+                                case 15:
+                                    toStringArray.push(card.attachments);
+                                    break;
+                                case 16:
+                                    toStringArray.push(card.votes);
+                                    break;
+                                case 17:
+                                    toStringArray.push(card.spent);
+                                    break;
+                                case 18:
+                                    toStringArray.push(card.estimate);
+                                    break;
+                                case 19:
+                                    toStringArray.push(card.points_estimate);
+                                    break;
+                                case 20:
+                                    toStringArray.push(card.points_consumed);
+                                    break;
+                                case 21:
+                                    toStringArray.push(card.datetimeCreated);
+                                    break;
+                                case 22:
+                                    toStringArray.push(card.memberCreator);
+                                    break;
+                                case 23:
+                                    toStringArray.push(card.LastActivity);
+                                    break;
+                                case 24:
+                                    toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    break;
+                                case 25:
+                                    toStringArray.push(card.datetimeDone);
+                                    break;
+                                case 26:
+                                    toStringArray.push(card.memberDone);
+                                    break;
+                                case 27:
+                                    toStringArray.push(card.completionTime);
+                                    break;
+                                case 28:
+                                    toStringArray.push(card.memberInitials);
+                                    break;
+                                case 29:
+                                    toStringArray.push(card.labels.toString());
+                                    break;
+                            }
+                        }
+                    }
+
                     if (card.isArchived) {
                         var lblrArch2 = wArchived.data.push([]) - 1;
                         wArchived.data[lblrArch2] = toStringArray;
@@ -1664,87 +2228,272 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
 
             case 3:
                 // 3=members as rows
-                columnHeadings = [
-                    'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
-                    'Total Checklist items', 'Completed Checklist items', 'Checklists',
-                    'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
-                    'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'Due',
-                    'Done', 'DoneBy', 'DoneTime', 'Member', 'Labels'
-                ];
-
                 if (card.memberInitials.length > 0) {
 
                     card.memberInitials.split(",").forEach(function(mbm) {
 
-                            toStringArray = [
-                                card.boardName,
-                                card.listName,
-                                card.cardID,
-                                card.title,
-                                card.shortLink,
-                                card.cardDescription,
-                                nTotalCheckListItems,
-                                nTotalCheckListItemsCompleted,
-                                card.checkLists,
-                                card.comments,
-                                card.attachments,
-                                card.votes,
-                                card.spent,
-                                card.estimate,
-                                card.points_estimate,
-                                card.points_consumed,
-                                card.datetimeCreated,
-                                card.memberCreator,
-                                (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
-                                card.datetimeDone,
-                                card.memberDone,
-                                card.completionTime,
-                                mbm,
-                                card.labels.toString()
-                            ];
+                        // toStringArray = [
+                        //     card.boardName,
+                        //     card.listName,
+                        //     card.cardID,
+                        //     card.title,
+                        //     card.shortLink,
+                        //     card.cardDescription,
+                        //     nTotalCheckListItems,
+                        //     nTotalCheckListItemsCompleted,
+                        //     card.checkLists,
+                        //     card.numberOfComments,
+                        //     card.comments,
+                        //     card.attachments,
+                        //     card.votes,
+                        //     card.spent,
+                        //     card.estimate,
+                        //     card.points_estimate,
+                        //     card.points_consumed,
+                        //     card.datetimeCreated,
+                        //     card.memberCreator,
+                        //     card.LastActivity,
+                        //     (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
+                        //     card.datetimeDone,
+                        //     card.memberDone,
+                        //     card.completionTime,
+                        //     mbm,
+                        //     card.labels.toString()
+                        // ];
 
-                            if (card.isArchived) {
-                                var rArch2 = wArchived.data.push([]) - 1;
-                                wArchived.data[rArch2] = toStringArray;
-                            } else {
-                                var r2 = w.data.push([]) - 1;
-                                w.data[r2] = toStringArray;
+                        toStringArray = [];
+                        // filter columns
+                        for (var nCol = 0; nCol < allColumns.length; nCol++) {
+                            if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                                switch (nCol) {
+                                    case 0:
+                                        toStringArray.push(card.boardName);
+                                        break;
+                                    case 1:
+                                        toStringArray.push(card.listName);
+                                        break;
+                                    case 2:
+                                        toStringArray.push(card.cardID);
+                                        break;
+                                    case 3:
+                                        toStringArray.push(card.title);
+                                        break;
+                                    case 4:
+                                        toStringArray.push(card.shortLink);
+                                        break;
+                                    case 5:
+                                        toStringArray.push(card.cardDescription);
+                                        break;
+                                    case 6:
+                                        toStringArray.push(card.nTotalCheckListItems);
+                                        break;
+                                    case 7:
+                                        toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                        break;
+                                    case 8:
+                                        toStringArray.push(card.checkLists);
+                                        break;
+                                    case 9:
+                                        toStringArray.push(card.numberOfComments);
+                                        break;
+                                    case 10:
+                                        toStringArray.push(card.comments);
+                                        break;
+                                    case 11:
+                                        toStringArray.push(card.attachments);
+                                        break;
+                                    case 12:
+                                        toStringArray.push(card.votes);
+                                        break;
+                                    case 13:
+                                        toStringArray.push(card.spent);
+                                        break;
+                                    case 14:
+                                        toStringArray.push(card.estimate);
+                                        break;
+                                    case 15:
+                                        toStringArray.push(card.points_estimate);
+                                        break;
+                                    case 16:
+                                        toStringArray.push(card.points_consumed);
+                                        break;
+                                    case 17:
+                                        toStringArray.push(card.datetimeCreated);
+                                        break;
+                                    case 18:
+                                        toStringArray.push(card.memberCreator);
+                                        break;
+                                    case 19:
+                                        toStringArray.push(card.LastActivity);
+                                        break;
+                                    case 20:
+                                        toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                        break;
+                                    case 21:
+                                        toStringArray.push(card.datetimeDone);
+                                        break;
+                                    case 22:
+                                        toStringArray.push(card.memberDone);
+                                        break;
+                                    case 23:
+                                        toStringArray.push(card.completionTime);
+                                        break;
+                                    case 24:
+                                        toStringArray.push(mbm);
+                                        break;
+                                    case 25:
+                                        toStringArray.push(card.labels.toString());
+                                        break;
+                                }
                             }
+                        }
 
-                        });
+                        if (card.isArchived) {
+                            var rArch2 = wArchived.data.push([]) - 1;
+                            wArchived.data[rArch2] = toStringArray;
+                        } else {
+                            var r2 = w.data.push([]) - 1;
+                            w.data[r2] = toStringArray;
+                        }
+
+                    });
 
                 } else {
                     // no members
-                    toStringArray = [
-                        card.boardName,
-                        card.listName,
-                        card.cardID,
-                        card.title,
-                        card.shortLink,
-                        card.cardDescription,
-                        nTotalCheckListItems,
-                        nTotalCheckListItemsCompleted,
-                        '',
-                        '',
-                        '',
-                        '',
-                        '',
-                        card.comments,
-                        card.attachments,
-                        card.votes,
-                        card.spent,
-                        card.estimate,
-                        card.points_estimate,
-                        card.points_consumed,
-                        card.datetimeCreated,
-                        card.memberCreator,
-                        card.due,
-                        card.datetimeDone,
-                        card.memberDone,
-                        card.completionTime,
-                        card.memberInitials,
-                        card.labels.toString()
-                    ];
+                    // toStringArray = [
+                    //     card.boardName,
+                    //     card.listName,
+                    //     card.cardID,
+                    //     card.title,
+                    //     card.shortLink,
+                    //     card.cardDescription,
+                    //     nTotalCheckListItems,
+                    //     nTotalCheckListItemsCompleted,
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     '',
+                    //     card.numberOfComments,
+                    //     card.comments,
+                    //     card.attachments,
+                    //     card.votes,
+                    //     card.spent,
+                    //     card.estimate,
+                    //     card.points_estimate,
+                    //     card.points_consumed,
+                    //     card.datetimeCreated,
+                    //     card.memberCreator,
+                    //     card.LastActivity,
+                    //     card.due,
+                    //     card.datetimeDone,
+                    //     card.memberDone,
+                    //     card.completionTime,
+                    //     card.memberInitials,
+                    //     card.labels.toString()
+                    // ];
+
+                    toStringArray = [];
+                    // filter columns
+                    for (nCol = 0; nCol < allColumns.length; nCol++) {
+                        if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                            switch (nCol) {
+                                case 0:
+                                    toStringArray.push(card.boardName);
+                                    break;
+                                case 1:
+                                    toStringArray.push(card.listName);
+                                    break;
+                                case 2:
+                                    toStringArray.push(card.cardID);
+                                    break;
+                                case 3:
+                                    toStringArray.push(card.title);
+                                    break;
+                                case 4:
+                                    toStringArray.push(card.shortLink);
+                                    break;
+                                case 5:
+                                    toStringArray.push(card.cardDescription);
+                                    break;
+                                case 6:
+                                    toStringArray.push(card.nTotalCheckListItems);
+                                    break;
+                                case 7:
+                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    break;
+                                case 8:
+                                    toStringArray.push('');
+                                    break;
+                                case 9:
+                                    toStringArray.push('');
+                                    break;
+                                case 10:
+                                    toStringArray.push('');
+                                    break;
+                                case 11:
+                                    toStringArray.push('');
+                                    break;
+                                case 12:
+                                    toStringArray.push('');
+                                    break;
+                                case 13:
+                                    toStringArray.push(card.numberOfComments);
+                                    break;
+                                case 14:
+                                    toStringArray.push(card.comments);
+                                    break;
+                                case 15:
+                                    toStringArray.push(card.attachments);
+                                    break;
+                                case 16:
+                                    toStringArray.push(card.votes);
+                                    break;
+                                case 17:
+                                    toStringArray.push(card.spent);
+                                    break;
+                                case 18:
+                                    toStringArray.push(card.estimate);
+                                    break;
+                                case 19:
+                                    toStringArray.push(card.points_estimate);
+                                    break;
+                                case 20:
+                                    toStringArray.push(card.points_consumed);
+                                    break;
+                                case 21:
+                                    toStringArray.push(card.datetimeCreated);
+                                    break;
+                                case 22:
+                                    toStringArray.push(card.memberCreator);
+                                    break;
+                                case 23:
+                                    toStringArray.push(card.LastActivity);
+                                    break;
+                                case 24:
+                                    toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    break;
+                                case 25:
+                                    toStringArray.push(card.datetimeDone);
+                                    break;
+                                case 26:
+                                    toStringArray.push(card.memberDone);
+                                    break;
+                                case 27:
+                                    toStringArray.push(card.completionTime);
+                                    break;
+                                case 28:
+                                    toStringArray.push(card.memberInitials);
+                                    break;
+                                case 29:
+                                    toStringArray.push(card.labels.toString());
+                                    break;
+                            }
+                        }
+                    }
+
                     if (card.isArchived) {
                         var lblrArch3 = wArchived.data.push([]) - 1;
                         wArchived.data[lblrArch3] = toStringArray;
@@ -1756,7 +2505,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows) {
                 break;
 
             default:
-                console.log('DEFAULT: ' + iExcelItemsAsRows);
+                // console.log('DEFAULT: ' + iExcelItemsAsRows);
                 break;
         }
 
@@ -1877,8 +2626,8 @@ function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo, bchkHT
             for (i = 0; i < card.jsonAttachments.length; i++) {
 
                 // console.log('ATTACHMENT = ' + JSON.stringify(card.jsonAttachments[i]) );
-                if( bchkHTMLInlineImages && isImage(card.jsonAttachments[i].name)) {
-                    
+                if (bchkHTMLInlineImages && isImage(card.jsonAttachments[i].name)) {
+
                     var sImg = '![' + card.jsonAttachments[i].name + '](' + card.jsonAttachments[i].url + ')';
 
                     mdOut += '**' + card.jsonAttachments[i].name + '** (' + Number(card.jsonAttachments[i].bytes / 1024).toFixed(2) + ' kb) [download](' + card.jsonAttachments[i].url + ')\n\n' + sImg + '\n\n';

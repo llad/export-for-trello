@@ -11,6 +11,16 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+
+### Version 1.9.33:
+
+Released 04/24/2017:
+
+- new data field dateLastActivity exported (issue #18 https://github.com/trapias/TrelloExport/issues/18)
+- new data field numberOfComments exported (issue #19 https://github.com/trapias/TrelloExport/issues/19)
+- new option to choose which columns to export to Excel (issue #17 https://github.com/trapias/TrelloExport/issues/17)
+
+
 ### Version 1.9.32:
 
 Enhancements:

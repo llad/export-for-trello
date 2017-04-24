@@ -1,24 +1,31 @@
-#optionslist input, #optionslist select, #optionslist select option, #optionslist textarea {
-	min-height: 1em;
-	padding: 5px;
-	font-size: 14px;
-	font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+#optionslist input,
+#optionslist select,
+#optionslist select option,
+#optionslist textarea {
+    min-height: 1em;
+    padding: 5px;
+    font-size: 14px;
+    font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
 }
+
 #optionslist select {
-	-webkit-appearance: menulist-button;
-	background: #E2E4E6;
+    -webkit-appearance: menulist-button;
+    background: #E2E4E6;
 }
 
 .TrelloExport h3 {
-	color: blue;
+    color: blue;
 }
 
-label{
-	display: inline-block !important;
-	font-weight: normal !important;
+label {
+    display: inline-block !important;
+    font-weight: normal !important;
 }
 
-input:checked + label {
-	// font-weight: bold !important;
-	text-decoration: underline;
+input:checked+label {
+    text-decoration: underline;
+}
+
+.badge {
+    background-color: transparent;
 }

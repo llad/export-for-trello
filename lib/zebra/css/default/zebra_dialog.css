@@ -1,6 +1,10 @@
 .ZebraDialog *,
 .ZebraDialog *:after,
-.ZebraDialog *:before  { -moz-box-sizing: content-box !important; -webkit-box-sizing: content-box !important; box-sizing: content-box !important }
+.ZebraDialog *:before {
+    -moz-box-sizing: content-box !important;
+    -webkit-box-sizing: content-box !important;
+    box-sizing: content-box !important
+}
 
 .ZebraDialog {
     width: 350px;
@@ -36,8 +40,10 @@
     vertical-align: middle;
 }
 
+
 /*  set background color here and not on ZebraDialog_Body, or you'll eventually run into problems with rounded corners
     when using smaller widths for border! */
+
 .ZebraDialog .ZebraDialog_BodyOuter {
     background: #E7EDEF;
 }
@@ -55,9 +61,24 @@
 }
 
 .ZebraDialog .ZebraDialog_Buttons:before,
-.ZebraDialog .ZebraDialog_Buttons:after     { content: "\0020"; display: block; height: 0; visibility: hidden; font-size: 0 }
-.ZebraDialog .ZebraDialog_Buttons:after     { clear: both }
-.ZebraDialog .ZebraDialog_Buttons           { *zoom: 1 } /* for IE only */
+.ZebraDialog .ZebraDialog_Buttons:after {
+    content: "\0020";
+    display: block;
+    height: 0;
+    visibility: hidden;
+    font-size: 0
+}
+
+.ZebraDialog .ZebraDialog_Buttons:after {
+    clear: both
+}
+
+.ZebraDialog .ZebraDialog_Buttons {
+    *zoom: 1
+}
+
+
+/* for IE only */
 
 .ZebraDialog .ZebraDialog_Buttons a {
     font-weight: bold;
@@ -82,15 +103,13 @@
     color: #666
 }
 
-.ZebraDialog a.ZebraDialog_Close:hover {
-}
+.ZebraDialog a.ZebraDialog_Close:hover {}
 
 .ZebraDialog .ZebraDialog_Title a.ZebraDialog_Close {
     color: #E7EDEF;
 }
 
-.ZebraDialog .ZebraDialog_Title a.ZebraDialog_Close:hover {
-}
+.ZebraDialog .ZebraDialog_Title a.ZebraDialog_Close:hover {}
 
 .ZebraDialogOverlay {
     background: #666;
@@ -99,8 +118,10 @@
     height: 100%;
 }
 
+
 /* = YOU SHOULD NOT CHANGE ANYTHING FROM THIS POINT ON
 ---------------------------------------------------------------------------------------------------------------------*/
+
 .ZebraDialog {
     -webkit-border-radius: 10px;
     -moz-border-radius: 10px;
@@ -165,11 +186,25 @@
     _height: 85px;
 }
 
-.ZebraDialog .ZebraDialog_Confirmation  { background-image: url('confirmation.png') }
-.ZebraDialog .ZebraDialog_Error         { background-image: url('error.png') }
-.ZebraDialog .ZebraDialog_Information   { background-image: url('information.png') }
-.ZebraDialog .ZebraDialog_Question      { background-image: url('question.png') }
-.ZebraDialog .ZebraDialog_Warning       { background-image: url('warning.png') }
+.ZebraDialog .ZebraDialog_Confirmation {
+    background-image: url('confirmation.png')
+}
+
+.ZebraDialog .ZebraDialog_Error {
+    background-image: url('error.png')
+}
+
+.ZebraDialog .ZebraDialog_Information {
+    background-image: url('information.png')
+}
+
+.ZebraDialog .ZebraDialog_Question {
+    background-image: url('question.png')
+}
+
+.ZebraDialog .ZebraDialog_Warning {
+    background-image: url('warning.png')
+}
 
 .ZebraDialog .ZebraDialog_ButtonsOuter {
     border-left-style: solid;
@@ -193,20 +228,18 @@
     -webkit-border-radius: 6px;
     -moz-border-radius: 6px;
     border-radius: 6px;
-
-    /* taken from Twitter Bootstrap */
     background-color: #006DCC;
-    *background-color: #0044CC;
-    background-image: -moz-linear-gradient(top, #0088CC, #0044CC);
-    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#0088CC), to(#0044CC));
-    background-image: -webkit-linear-gradient(top, #0088CC, #0044CC);
-    background-image: -o-linear-gradient(top, #0088CC, #0044CC);
-    background-image: linear-gradient(to bottom, #0088CC, #0044CC);
+    *background-color: #0079bf;
+    background-image: -moz-linear-gradient(top, #0088CC, #0079bf);
+    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#0088CC), to(#0079bf));
+    background-image: -webkit-linear-gradient(top, #0088CC, #0079bf);
+    background-image: -o-linear-gradient(top, #0088CC, #0079bf);
+    background-image: linear-gradient(to bottom, #0088CC, #0079bf);
     background-repeat: repeat-x;
-    border-color: #0044CC #0044CC #002A80;
+    border-color: #0079bf #0079bf #002A80;
     border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
-    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#FF0088CC', endColorstr='#FF0044CC', GradientType=0);
-    filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
+    filter: progid: DXImageTransform.Microsoft.gradient(startColorstr='#FF0088CC', endColorstr='#FF0079bf', GradientType=0);
+    filter: progid: DXImageTransform.Microsoft.gradient(enabled=false);
 }
 
 .ZebraDialog .ZebraDialog_Buttons_Centered .ZebraDialog_Buttons {

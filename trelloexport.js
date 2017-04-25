@@ -136,8 +136,11 @@
     - can now check/uncheck all columns to export
 * Whatsnew for v. 1.9.35:
     - fix Trello header css height
+* Whatsnew for v. 1.9.36:
+    - filter by list name, card name or label name
+    - help tooltips
 */
-var VERSION = '1.9.35';
+var VERSION = '1.9.36';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -480,20 +483,21 @@ function TrelloExportOptions() {
     }
 
     var sDialog = '<table id="optionslist">' +
-        '<tr><td>Export to</td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
-        '<tr><td>Export:</td><td><input type="checkbox" id="exportArchived" title="Export archived cards">Archived cards ' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived cards">Archived cards ' +
         '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments</td></tr>' +
-        '<tr id="cklAsRowsRow"><td>Create one Excel row per each:</td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
+        '<tr id="cklAsRowsRow"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Create one Excel row per each card, checklist item, label or card member">One row per each:</span></td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
         '<tr id="xlsColumns">' +
-        '<td>Export columns</td>' +
+        '<td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose columns to be exported to Excel">Export columns</span></td>' +
         '<td><select multiple="multiple" id="selectedColumns">' + options.join('') + '</select></td>' +
-        // '<td>' + options.join('') + '</td>' +
         '</tr>' +
-        '<tr id="ckHTMLCardInfoRow" style="display:none"><td>Options:</td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images' +
+        '<tr id="ckHTMLCardInfoRow" style="display:none"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set options for the target HTML">Options:</span></td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images' +
         '<br/>Stylesheet: <input id="trelloExportCss" type="text" name="css" value="http://trapias.github.io/assets/TrelloExport/default.css"> ' + '</td></tr>' +
-        '<tr><td>Done lists name:</td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
-        '<tr><td>Type of export:</td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
-        '<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr></table>';
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set the List name prefix used to recognize your completed lists. See http://trapias.github.io/blog/trelloexport-1-9-13">Done lists name:</span></td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose what data to export">Type of export:</span></td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Only include items whose name starts with the specified prefix">Filter:</span></td><td>' +
+        '<select id="filterMode"><option value="List">On List name</option><option value="Label">On Label name</option><option value="Card">On card name</option></select>' +
+        '<input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr></table>';
 
     var dlgReady = new Promise(
         function(resolve, reject) {
@@ -594,9 +598,12 @@ function TrelloExportOptions() {
 
                         var css = $('#trelloExportCss').val();
 
+                        // filterMode
+                        var filterMode = $('#filterMode').val();
+
                         // launch export
                         setTimeout(function() {
-                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css);
+                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode);
                         }, 500);
                         return true;
                     }
@@ -613,6 +620,7 @@ function TrelloExportOptions() {
 
     dlgReady.then(function() {
 
+        $('[data-toggle="tooltip"]').tooltip();
 
         $('#selectedColumns').multiselect({ includeSelectAllOption: true });
 
@@ -949,14 +957,14 @@ function extractFloat(str, regex, groupIndex) {
 }
 
 
-function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css) {
+function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode) {
     console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
 
     var promLoadData = new Promise(
         function(resolve, reject) {
             $.growl({
                 title: "TrelloExport",
-                message: "Loading data, please wait"
+                message: "Loading data, please wait..."
             });
 
             setTimeout(function() {
@@ -1031,7 +1039,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                         // 1.9.14: filter lists by name
                         var accept = true;
-                        if (filterListsNames.length > 0) {
+                        if (filterListsNames.length > 0 && filterMode === 'List') {
                             for (var y = 0; y < filterListsNames.length; y++) {
                                 if (!listName.toLowerCase().startsWith(filterListsNames[y].trim().toLowerCase())) {
                                     accept = false;
@@ -1099,6 +1107,22 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 }
                                             }
 
+                                            var accept = true;
+                                            if (filterListsNames.length > 0 && filterMode === 'Card') {
+                                                for (var y = 0; y < filterListsNames.length; y++) {
+                                                    if (!card.name.toLowerCase().startsWith(filterListsNames[y].trim().toLowerCase())) {
+                                                        accept = false;
+                                                    } else {
+                                                        accept = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if (!accept) {
+                                                console.log('skipping card ' + card.name);
+                                                return true;
+                                            }
+
                                             exportedCardsIDs.push(card.id);
                                             var title = card.name;
 
@@ -1158,16 +1182,44 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             });
 
                                             //Get all labels
-                                            // console.log('Labels: ' + card.labels.length);
                                             var labels = [];
+                                            if (card.labels.length <= 0 && filterListsNames.length > 0 && filterMode === 'Label') {
+                                                // filtering by label name: skip cards without labels
+                                                accept = false;
+                                                return true;
+                                            }
+
+                                            if (filterListsNames.length > 0 && filterMode === 'Label')
+                                                accept = false;
+
                                             $.each(card.labels, function(i, label) {
+
                                                 if (label.name) {
                                                     labels.push(label.name);
                                                 } else {
                                                     labels.push(label.color);
                                                 }
 
+                                                if (filterListsNames.length > 0 && filterMode === 'Label') {
+                                                    for (var y = 0; y < filterListsNames.length; y++) {
+                                                        if (accept)
+                                                            continue;
+                                                        if (!label.name.toLowerCase().startsWith(filterListsNames[y].trim().toLowerCase())) {
+                                                            accept = false;
+                                                        } else {
+                                                            accept = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+
+
                                             });
+                                            if (!accept) {
+                                                // filtering by label name
+                                                // console.log('FILTER2 label filter skipping card ' + card.name);
+                                                return true;
+                                            }
 
                                             if (bExportChecklists) {
                                                 //all checklists
@@ -2815,5 +2867,4 @@ function createOPMLExport(jsonComputedCards) {
         message: 'Done. Downloading OPML file...',
         fixed: true
     });
-
 }

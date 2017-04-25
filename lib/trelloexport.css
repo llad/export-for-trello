@@ -14,7 +14,8 @@
 }
 
 .TrelloExport h3 {
-    color: blue;
+    color: #0079bf;
+    /* rgb(0, 121, 191); */
 }
 
 label {
@@ -35,6 +36,10 @@ input:checked+label {
 
 #header {
     height: 40px !important;
+}
+
+.tooltip-inner {
+    padding: 10px;
 }
 
 

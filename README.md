@@ -11,6 +11,14 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.36
+
+Released 04/25/2017:
+
+- filter by list name, card name or label name
+- help tooltips
+
+
 ### Version 1.9.35:
 
 Fixed a css conflict that caused Trello header bar to loose height.

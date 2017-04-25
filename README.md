@@ -11,6 +11,9 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.35:
+
+Fixed a css conflict that caused Trello header bar to loose height.
 
 ### Version 1.9.34:
 

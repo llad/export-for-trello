@@ -26,6 +26,16 @@ input:checked+label {
     text-decoration: underline;
 }
 
+
+/* bootstrap fixes */
+
 .badge {
     background-color: transparent;
 }
+
+#header {
+    height: 40px !important;
+}
+
+
+/* end bootstrap fixes */

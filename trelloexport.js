@@ -134,8 +134,10 @@
     - only show columns chooser for Excel exports
     - can now set a custom css for HTML export
     - can now check/uncheck all columns to export
+* Whatsnew for v. 1.9.35:
+    - fix Trello header css height
 */
-var VERSION = '1.9.34';
+var VERSION = '1.9.35';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript

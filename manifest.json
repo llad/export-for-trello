@@ -1,11 +1,9 @@
 {
     "name": "TrelloExport",
-    "version": "1.9.34",
+    "version": "1.9.35",
     "manifest_version": 2,
-
     "description": "Export Trello Boards to Excel, Markdown, HTML and OPML",
     "icons": { "128": "icons/trelloexport_128.png" },
-
     "content_scripts": [{
         "matches": ["https://trello.com/*"],
         "css": ["lib/jquery.growl.css",
@@ -28,6 +26,6 @@
             "lib/bootstrap-multiselect/bootstrap-multiselect.js",
             "trelloexport.js"
         ]
-    }]
-
+    }],
+    "homepage_url": "http://trapias.github.io"
 }

@@ -18,12 +18,12 @@
     /* rgb(0, 121, 191); */
 }
 
-label {
+#optionslist label {
     display: inline-block !important;
     font-weight: normal !important;
 }
 
-input:checked+label {
+#optionslist input:checked+label {
     text-decoration: underline;
 }
 
@@ -44,3 +44,11 @@ input:checked+label {
 
 
 /* end bootstrap fixes */
+
+.multiselect-container.dropdown-menu {
+    background: white;
+    border: solid 1px black;
+    height: 300px;
+    overflow-y: scroll;
+    display: none;
+}

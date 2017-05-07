@@ -139,8 +139,10 @@
 * Whatsnew for v. 1.9.36:
     - filter by list name, card name or label name
     - help tooltips
+* Whatsnew for v. 1.9.37:
+    - bugfix multiple css issues and a bad bug avoiding the "add member" function to work properly, all due to the introduction of bootstrap css and javascript to use the bootstrap-multiselect plugin; now removed bootstrap and manually handled multiselect missing functionalities
 */
-var VERSION = '1.9.36';
+var VERSION = '1.9.37';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -620,9 +622,14 @@ function TrelloExportOptions() {
 
     dlgReady.then(function() {
 
-        $('[data-toggle="tooltip"]').tooltip();
+        //$('[data-toggle="tooltip"]').tooltip();
+
 
         $('#selectedColumns').multiselect({ includeSelectAllOption: true });
+
+        $('button.multiselect.dropdown-toggle.btn.btn-default').click(function() {
+            $('.multiselect-container.dropdown-menu').toggle();
+        });
 
         $('#exporttype').on('change', function() {
             var sexporttype = $('#exporttype').val();
@@ -766,6 +773,11 @@ function setColumnHeadings(asrowsMode) {
         .end()
         .append(options.join(''))
         .multiselect({ includeSelectAllOption: true });
+
+    $('button.multiselect.dropdown-toggle.btn.btn-default').click(function() {
+        $('.multiselect-container.dropdown-menu').toggle();
+    });
+
 }
 
 function resetOptions() {

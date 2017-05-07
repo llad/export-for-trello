@@ -11,6 +11,13 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.37
+
+Released 05/07/2017:
+
+Bugfix multiple css issues and a bad bug avoiding the "add member" function to work properly, all due to the introduction of bootstrap css and javascript to use the bootstrap-multiselect plugin; now removed bootstrap and manually handled multiselect missing functionalities. Temporary disabled tooltips, based on bootstrap.
+
+
 ### Version 1.9.36
 
 Released 04/25/2017:

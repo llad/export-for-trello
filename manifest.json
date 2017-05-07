@@ -1,6 +1,6 @@
 {
     "name": "TrelloExport",
-    "version": "1.9.36",
+    "version": "1.9.37",
     "manifest_version": 2,
     "description": "Export Trello Boards to Excel, Markdown, HTML and OPML",
     "icons": { "128": "icons/trelloexport_128.png" },
@@ -8,7 +8,6 @@
         "matches": ["https://trello.com/*"],
         "css": ["lib/jquery.growl.css",
             "lib/zebra/css/flat/zebra_dialog.css",
-            "lib/bootstrap-multiselect/bootstrap.min.css",
             "lib/bootstrap-multiselect/bootstrap-multiselect.css",
             "lib/trelloexport.css"
         ],
@@ -22,7 +21,6 @@
             "lib/injectTrelloExporter.js",
             "lib/datediff.js",
             "lib/showdown.min.js",
-            "lib/bootstrap-multiselect/bootstrap.min.js",
             "lib/bootstrap-multiselect/bootstrap-multiselect.js",
             "trelloexport.js"
         ]

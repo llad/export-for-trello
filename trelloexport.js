@@ -141,8 +141,12 @@
     - help tooltips
 * Whatsnew for v. 1.9.37:
     - bugfix multiple css issues and a bad bug avoiding the "add member" function to work properly, all due to the introduction of bootstrap css and javascript to use the bootstrap-multiselect plugin; now removed bootstrap and manually handled multiselect missing functionalities
+* Whatsnew for v. 1.9.38:
+    - css cleanup
+    - re-enabled tooltips
+    - export custom fields (pluginData handled with the "Custom Fields" Power-Up) to Excel
 */
-var VERSION = '1.9.37';
+var VERSION = '1.9.38';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -217,7 +221,8 @@ var $,
     exportcards = [],
     nameListDone = "Done",
     filterListsNames = [],
-    pageSize = 1000;
+    pageSize = 1000,
+    customFields = [];
 
 function sheet_from_array_of_arrays(data, opts) {
     // console.log('sheet_from_array_of_arrays ' + data);
@@ -469,13 +474,9 @@ function TrelloExportOptions() {
     }
     idBoard = parts[1];
 
-    var columnHeadings = [
-        'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
-        'Total Checklist items', 'Completed Checklist items', 'Checklists',
-        'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
-        'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
-        'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels'
-    ];
+    var columnHeadings = [];
+    customFields = []; // reset
+    columnHeadings = setColumnHeadings(0);
 
     // https://github.com/davidstutz/bootstrap-multiselect
     var options = [];
@@ -487,7 +488,7 @@ function TrelloExportOptions() {
     var sDialog = '<table id="optionslist">' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived cards">Archived cards ' +
-        '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments</td></tr>' +
+        '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments  <input type="checkbox" id="customfields" title="Export Custom Fields">Custom Fields</td></tr>' +
         '<tr id="cklAsRowsRow"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Create one Excel row per each card, checklist item, label or card member">One row per each:</span></td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
         '<tr id="xlsColumns">' +
         '<td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose columns to be exported to Excel">Export columns</span></td>' +
@@ -523,6 +524,7 @@ function TrelloExportOptions() {
                         iExcelItemsAsRows = $('input[name=asrows]:checked').val();
                         bckHTMLCardInfo = $('#ckHTMLCardInfo').is(':checked');
                         bchkHTMLInlineImages = $('#chkHTMLInlineImages').is(':checked');
+                        var bExportCustomFields = $('#customfields').is(':checked');
 
                         if (!bExportChecklists && iExcelItemsAsRows.toString() === '1') {
                             // checklist items as rows only available if checklists are exported
@@ -605,7 +607,7 @@ function TrelloExportOptions() {
 
                         // launch export
                         setTimeout(function() {
-                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode);
+                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields);
                         }, 500);
                         return true;
                     }
@@ -622,8 +624,7 @@ function TrelloExportOptions() {
 
     dlgReady.then(function() {
 
-        //$('[data-toggle="tooltip"]').tooltip();
-
+        $('[data-toggle="tooltip"]').tooltip();
 
         $('#selectedColumns').multiselect({ includeSelectAllOption: true });
 
@@ -688,10 +689,8 @@ function TrelloExportOptions() {
                     $('#ckHTMLCardInfoRow').show();
                     break;
                 default:
-
                     break;
             }
-
         });
 
         $('#cklAsRows').attr('disabled', true); //  default
@@ -709,6 +708,10 @@ function TrelloExportOptions() {
             setColumnHeadings(this.value);
         });
 
+        $('#customfields').click(function() {
+            setColumnHeadings($('input[name=asrows]:checked').val());
+        });
+
         // todo: show progress
         //
 
@@ -718,7 +721,6 @@ function TrelloExportOptions() {
 }
 
 function setColumnHeadings(asrowsMode) {
-    var columnHeadings = [];
     switch (Number(asrowsMode)) {
         case 1: // checklist item
             columnHeadings = [
@@ -740,7 +742,6 @@ function setColumnHeadings(asrowsMode) {
             ];
             break;
         case 3: // member
-            console.log('MEMBER');
             columnHeadings = [
                 'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
                 'Total Checklist items', 'Completed Checklist items', 'Checklists',
@@ -761,6 +762,11 @@ function setColumnHeadings(asrowsMode) {
             break;
     }
 
+    var bExportCustomFields = $('#customfields').is(':checked');
+
+    if (bExportCustomFields)
+        loadCustomFields(columnHeadings);
+
     var options = [];
     for (var x = 0; x < columnHeadings.length; x++) {
         var o = '<option value="' + columnHeadings[x] + '" selected="true">' + columnHeadings[x] + '</option>';
@@ -778,6 +784,89 @@ function setColumnHeadings(asrowsMode) {
         $('.multiselect-container.dropdown-menu').toggle();
     });
 
+    return columnHeadings;
+}
+
+// append custom fields to column headings
+function loadCustomFields(columnHeadings) {
+    $.ajax({
+        url: 'https://trello.com/1/boards/' + idBoard + '/pluginData',
+        dataType: 'json',
+        async: false,
+        success: function(pdata) {
+            for (var f = 0; f < pdata.length; f++) {
+                // console.log(JSON.stringify(pdata[f]));
+                // console.log('customFields pdata[' + f + '].value  = ' + pdata[f].value);
+                var ffo = JSON.parse(pdata[f].value);
+                for (var fi = 0; fi < ffo.fields.length; fi++) {
+                    // console.log('I ' + ffo.fields[fi].n);
+                    columnHeadings.push(ffo.fields[fi].n);
+                    customFields.push(ffo.fields[fi]);
+                }
+            }
+        }
+    });
+}
+
+function loadCardPluginData(cardID) {
+    // console.log('loadCardPluginData ' + cardID);
+    var rc = [];
+
+    $.ajax({
+        url: 'https://trello.com/1/cards/' + cardID + '/pluginData',
+        dataType: 'json',
+        async: false,
+        success: function(pdata) {
+            for (var f = 0; f < pdata.length; f++) {
+                var ffo = JSON.parse(pdata[f].value);
+                for (var key in ffo.fields) {
+                    var value = ffo.fields[key];
+                    var colData = getPluginData(key);
+                    if (colData !== null) {
+                        //t: 0=text, 1=number, 2=checkbox, 3=date, 4=dropdown
+                        switch (Number(colData.t)) {
+                            case 2, 4:
+                                // lookup value
+                                value = lookupCustomDataValue(key, value);
+                                break;
+                        }
+                        rc.push({ colName: colData.n, value: value });
+                    }
+                }
+            }
+            return rc;
+        }
+    });
+    return rc;
+}
+
+function lookupCustomDataValue(key, valueid) {
+    // console.log('lookupCustomDataValue ' + key + ' ID ' + valueid);
+    var v = null;
+    customFields.some(function(cf) {
+        if (cf.id.toString().trim() === key.toString().trim()) {
+            // get options
+            cf.o.forEach(function(o) {
+                if (o.id === valueid) {
+                    v = o.value;
+                    return v;
+                }
+            });
+            return v;
+        }
+    });
+    return v;
+}
+
+function getPluginData(key) {
+    var v = null;
+    customFields.some(function(cf) {
+        if (cf.id.toString().trim() === key.toString().trim()) {
+            v = cf;
+            return cf;
+        }
+    });
+    return v;
 }
 
 function resetOptions() {
@@ -969,7 +1058,7 @@ function extractFloat(str, regex, groupIndex) {
 }
 
 
-function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode) {
+function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields) {
     console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
 
     var promLoadData = new Promise(
@@ -1465,6 +1554,17 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'jsonAttachments': jsonAttachments
                                             };
 
+                                            if (bExportCustomFields) {
+                                                // load custom fields values for card
+                                                var cfVals = loadCardPluginData(card.id);
+
+                                                cfVals.forEach(function(dv) {
+                                                    // console.log('LOADED CF ' + dv.colName + ' = ' + dv.value);
+                                                    rowData[dv.colName] = dv.value;
+                                                });
+
+                                            }
+                                            // console.log('RAWDATA ' + JSON.stringify(rowData));
                                             jsonComputedCards.push(rowData);
                                         }
                                     });
@@ -1597,37 +1697,6 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
         switch (Number(iExcelItemsAsRows)) {
             case 0:
                 // standard checklist export
-
-                // toStringArray = [
-                //     card.boardName,
-                //     card.listName,
-                //     card.cardID,
-                //     card.title,
-                //     card.shortLink,
-                //     card.cardDescription,
-                //     nTotalCheckListItems,
-                //     nTotalCheckListItemsCompleted,
-                //     card.checkLists,
-                //     card.numberOfComments,
-                //     card.comments,
-                //     card.attachments,
-                //     card.votes,
-                //     card.spent,
-                //     card.estimate,
-                //     card.points_estimate,
-                //     card.points_consumed,
-                //     card.datetimeCreated,
-                //     card.memberCreator,
-                //     card.LastActivity,
-                //     (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
-                //     card.datetimeDone,
-                //     card.memberDone,
-                //     card.completionTime,
-                //     card.memberInitials,
-                //     card.labels.toString()
-                //     // ,card.isArchived
-                // ];
-
                 toStringArray = [];
                 // filter columns
                 for (var nCol = 0; nCol < allColumns.length; nCol++) {
@@ -1712,6 +1781,11 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                             case 25:
                                 toStringArray.push(card.labels.toString());
                                 break;
+
+                            default:
+                                // custom fields
+                                toStringArray.push(card[allColumns[nCol].value]);
+                                break;
                         }
                     }
                 }
@@ -1731,40 +1805,6 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                     card.jsonCheckLists.forEach(function(list) {
                         list.items.forEach(function(it) {
-
-                            // toStringArray = [
-                            //     card.boardName,
-                            //     card.listName,
-                            //     card.cardID,
-                            //     card.title,
-                            //     card.shortLink,
-                            //     card.cardDescription,
-                            //     nTotalCheckListItems,
-                            //     nTotalCheckListItemsCompleted,
-                            //     list.name,
-                            //     it.name,
-                            //     it.completed,
-                            //     it.completedDate,
-                            //     it.completedBy,
-                            //     card.numberOfComments,
-                            //     card.comments,
-                            //     card.attachments,
-                            //     card.votes,
-                            //     card.spent,
-                            //     card.estimate,
-                            //     card.points_estimate,
-                            //     card.points_consumed,
-                            //     card.datetimeCreated,
-                            //     card.memberCreator,
-                            //     card.LastActivity,
-                            //     card.due,
-                            //     card.datetimeDone,
-                            //     card.memberDone,
-                            //     card.completionTime,
-                            //     card.memberInitials,
-                            //     card.labels.toString()
-                            //     // ,card.isArchived
-                            // ];
 
                             toStringArray = [];
                             // filter columns
@@ -1862,6 +1902,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         case 29:
                                             toStringArray.push(card.labels.toString());
                                             break;
+                                        default:
+                                            // custom fields
+                                            toStringArray.push(card[allColumns[nCol].value]);
+                                            break;
                                     }
                                 }
                             }
@@ -1879,39 +1923,6 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                 } else {
                     // no checklist items
-                    // toStringArray = [
-                    //     card.boardName,
-                    //     card.listName,
-                    //     card.cardID,
-                    //     card.title,
-                    //     card.shortLink,
-                    //     card.cardDescription,
-                    //     nTotalCheckListItems,
-                    //     nTotalCheckListItemsCompleted,
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     card.numberOfComments,
-                    //     card.comments,
-                    //     card.attachments,
-                    //     card.votes,
-                    //     card.spent,
-                    //     card.estimate,
-                    //     card.points_estimate,
-                    //     card.points_consumed,
-                    //     card.datetimeCreated,
-                    //     card.memberCreator,
-                    //     card.LastActivity,
-                    //     card.due,
-                    //     card.datetimeDone,
-                    //     card.memberDone,
-                    //     card.completionTime,
-                    //     card.memberInitials,
-                    //     card.labels.toString()
-                    //     // ,card.isArchived
-                    // ];
 
                     toStringArray = [];
                     // filter columns
@@ -2009,6 +2020,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                 case 29:
                                     toStringArray.push(card.labels.toString());
                                     break;
+                                default:
+                                    // custom fields
+                                    toStringArray.push(card[allColumns[nCol].value]);
+                                    break;
                             }
                         }
                     }
@@ -2028,35 +2043,6 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                 if (card.labels.length > 0) {
 
                     card.labels.forEach(function(lbl) {
-
-                        // toStringArray = [
-                        //     card.boardName,
-                        //     card.listName,
-                        //     card.cardID,
-                        //     card.title,
-                        //     card.shortLink,
-                        //     card.cardDescription,
-                        //     nTotalCheckListItems,
-                        //     nTotalCheckListItemsCompleted,
-                        //     card.checkLists,
-                        //     card.numberOfComments,
-                        //     card.comments,
-                        //     card.attachments,
-                        //     card.votes,
-                        //     card.spent,
-                        //     card.estimate,
-                        //     card.points_estimate,
-                        //     card.points_consumed,
-                        //     card.datetimeCreated,
-                        //     card.memberCreator,
-                        //     card.LastActivity,
-                        //     (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
-                        //     card.datetimeDone,
-                        //     card.memberDone,
-                        //     card.completionTime,
-                        //     card.memberInitials,
-                        //     lbl
-                        // ];
 
                         toStringArray = [];
                         // filter columns
@@ -2142,6 +2128,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     case 25:
                                         toStringArray.push(lbl);
                                         break;
+                                    default:
+                                        // custom fields
+                                        toStringArray.push(card[allColumns[nCol].value]);
+                                        break;
                                 }
                             }
                         }
@@ -2158,38 +2148,6 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                 } else {
                     // no labels
-                    // toStringArray = [
-                    //     card.boardName,
-                    //     card.listName,
-                    //     card.cardID,
-                    //     card.title,
-                    //     card.shortLink,
-                    //     card.cardDescription,
-                    //     nTotalCheckListItems,
-                    //     nTotalCheckListItemsCompleted,
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     card.comments,
-                    //     card.numberOfComments,
-                    //     card.attachments,
-                    //     card.votes,
-                    //     card.spent,
-                    //     card.estimate,
-                    //     card.points_estimate,
-                    //     card.points_consumed,
-                    //     card.datetimeCreated,
-                    //     card.memberCreator,
-                    //     card.LastActivity,
-                    //     card.due,
-                    //     card.datetimeDone,
-                    //     card.memberDone,
-                    //     card.completionTime,
-                    //     card.memberInitials,
-                    //     card.labels.toString()
-                    // ];
 
                     toStringArray = [];
                     // filter columns
@@ -2287,6 +2245,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                 case 29:
                                     toStringArray.push(card.labels.toString());
                                     break;
+                                default:
+                                    // custom fields
+                                    toStringArray.push(card[allColumns[nCol].value]);
+                                    break;
                             }
                         }
                     }
@@ -2306,35 +2268,6 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                 if (card.memberInitials.length > 0) {
 
                     card.memberInitials.split(",").forEach(function(mbm) {
-
-                        // toStringArray = [
-                        //     card.boardName,
-                        //     card.listName,
-                        //     card.cardID,
-                        //     card.title,
-                        //     card.shortLink,
-                        //     card.cardDescription,
-                        //     nTotalCheckListItems,
-                        //     nTotalCheckListItemsCompleted,
-                        //     card.checkLists,
-                        //     card.numberOfComments,
-                        //     card.comments,
-                        //     card.attachments,
-                        //     card.votes,
-                        //     card.spent,
-                        //     card.estimate,
-                        //     card.points_estimate,
-                        //     card.points_consumed,
-                        //     card.datetimeCreated,
-                        //     card.memberCreator,
-                        //     card.LastActivity,
-                        //     (card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
-                        //     card.datetimeDone,
-                        //     card.memberDone,
-                        //     card.completionTime,
-                        //     mbm,
-                        //     card.labels.toString()
-                        // ];
 
                         toStringArray = [];
                         // filter columns
@@ -2420,6 +2353,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     case 25:
                                         toStringArray.push(card.labels.toString());
                                         break;
+                                    default:
+                                        // custom fields
+                                        toStringArray.push(card[allColumns[nCol].value]);
+                                        break;
                                 }
                             }
                         }
@@ -2436,38 +2373,6 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                 } else {
                     // no members
-                    // toStringArray = [
-                    //     card.boardName,
-                    //     card.listName,
-                    //     card.cardID,
-                    //     card.title,
-                    //     card.shortLink,
-                    //     card.cardDescription,
-                    //     nTotalCheckListItems,
-                    //     nTotalCheckListItemsCompleted,
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     '',
-                    //     card.numberOfComments,
-                    //     card.comments,
-                    //     card.attachments,
-                    //     card.votes,
-                    //     card.spent,
-                    //     card.estimate,
-                    //     card.points_estimate,
-                    //     card.points_consumed,
-                    //     card.datetimeCreated,
-                    //     card.memberCreator,
-                    //     card.LastActivity,
-                    //     card.due,
-                    //     card.datetimeDone,
-                    //     card.memberDone,
-                    //     card.completionTime,
-                    //     card.memberInitials,
-                    //     card.labels.toString()
-                    // ];
 
                     toStringArray = [];
                     // filter columns
@@ -2564,6 +2469,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     break;
                                 case 29:
                                     toStringArray.push(card.labels.toString());
+                                    break;
+                                default:
+                                    // custom fields
+                                    toStringArray.push(card[allColumns[nCol].value]);
                                     break;
                             }
                         }

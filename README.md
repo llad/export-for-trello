@@ -11,6 +11,15 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.38
+
+Released 05/12/2017:
+
+- css cleanup
+- re-enabled tooltips
+- export custom fields (pluginData handled with the "Custom Fields" Power-Up) to Excel, (issue #22 https://github.com/trapias/TrelloExport/issues/22)
+
+
 ### Version 1.9.37
 
 Released 05/07/2017:

@@ -27,27 +27,9 @@
     text-decoration: underline;
 }
 
-
-/* bootstrap fixes */
-
-.badge {
-    background-color: transparent;
-}
-
-#header {
-    height: 40px !important;
-}
-
-.tooltip-inner {
-    padding: 10px;
-}
-
-
-/* end bootstrap fixes */
-
 .multiselect-container.dropdown-menu {
     background: white;
-    border: solid 1px black;
+    border: solid 1px #0079bf;
     height: 300px;
     overflow-y: scroll;
     display: none;

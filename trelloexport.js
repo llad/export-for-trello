@@ -145,8 +145,11 @@
     - css cleanup
     - re-enabled tooltips
     - export custom fields (pluginData handled with the "Custom Fields" Power-Up) to Excel
+* Whatsnew for v. 1.9.39:
+    - fix custom fields loading (issue #27)
+    - fix card info export to MD (issue #25)
 */
-var VERSION = '1.9.38';
+var VERSION = '1.9.39';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -794,14 +797,18 @@ function loadCustomFields(columnHeadings) {
         dataType: 'json',
         async: false,
         success: function(pdata) {
-            for (var f = 0; f < pdata.length; f++) {
-                // console.log(JSON.stringify(pdata[f]));
-                // console.log('customFields pdata[' + f + '].value  = ' + pdata[f].value);
-                var ffo = JSON.parse(pdata[f].value);
-                for (var fi = 0; fi < ffo.fields.length; fi++) {
-                    // console.log('I ' + ffo.fields[fi].n);
-                    columnHeadings.push(ffo.fields[fi].n);
-                    customFields.push(ffo.fields[fi]);
+            if (pdata !== undefined) {
+                for (var f = 0; f < pdata.length; f++) {
+                    // console.log(JSON.stringify(pdata[f]));
+                    // console.log('customFields pdata[' + f + '].value  = ' + pdata[f].value);
+                    var ffo = JSON.parse(pdata[f].value);
+                    if (ffo.fields !== undefined) {
+                        for (var fi = 0; fi < ffo.fields.length; fi++) {
+                            console.log('Add custom field ' + ffo.fields[fi].n);
+                            columnHeadings.push(ffo.fields[fi].n);
+                            customFields.push(ffo.fields[fi]);
+                        }
+                    }
                 }
             }
         }
@@ -1615,7 +1622,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                 break;
 
             case 'MD':
-                createMarkdownExport(jsonComputedCards, true, true, bchkHTMLInlineImages);
+                createMarkdownExport(jsonComputedCards, true, bckHTMLCardInfo, bchkHTMLInlineImages);
                 break;
 
             case 'HTML':

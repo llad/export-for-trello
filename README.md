@@ -11,6 +11,15 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+
+### Version 1.9.39
+
+Released 08/02/2017:
+
+- fix custom fields loading ([issue #27](https://github.com/trapias/TrelloExport/issues/27))
+- fix card info export to MD ([issue #25](https://github.com/trapias/TrelloExport/issues/25))
+
+
 ### Version 1.9.38
 
 Released 05/12/2017:

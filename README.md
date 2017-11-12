@@ -12,6 +12,14 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 ## Release history
 
 
+### Version 1.9.40
+
+A couple of fixes, released 11/12/2017:
+
+- https://github.com/trapias/TrelloExport/issues/28 ok with Done prefix
+- contains vs startsWith filters for the "done" function
+
+
 ### Version 1.9.39
 
 Released 08/02/2017:

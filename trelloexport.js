@@ -148,8 +148,11 @@
 * Whatsnew for v. 1.9.39:
     - fix custom fields loading (issue #27)
     - fix card info export to MD (issue #25)
+* Whatsnew for v. 1.9.40:
+    - https://github.com/trapias/TrelloExport/issues/28 ok with Done prefix
+    - contains vs startsWith filters
 */
-var VERSION = '1.9.39';
+var VERSION = '1.9.40';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -290,6 +293,13 @@ function s2ab(s) {
 if (typeof String.prototype.startsWith != 'function') {
     String.prototype.startsWith = function(str) {
         return this.indexOf(str) === 0;
+    };
+}
+
+if (typeof String.prototype.stringContains != 'function') {
+    String.prototype.stringContains = function(str) {
+        console.log(this + ' CONTAINS ' + str + ' ? ' + this.indexOf(str) >= 0);
+        return this.indexOf(str) >= 0;
     };
 }
 
@@ -1149,7 +1159,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                         var accept = true;
                         if (filterListsNames.length > 0 && filterMode === 'List') {
                             for (var y = 0; y < filterListsNames.length; y++) {
-                                if (!listName.toLowerCase().startsWith(filterListsNames[y].trim().toLowerCase())) {
+                                if (!listName.toLowerCase().stringContains(filterListsNames[y].trim().toLowerCase())) {
                                     accept = false;
                                 } else {
                                     accept = true;
@@ -1218,7 +1228,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             var accept = true;
                                             if (filterListsNames.length > 0 && filterMode === 'Card') {
                                                 for (var y = 0; y < filterListsNames.length; y++) {
-                                                    if (!card.name.toLowerCase().startsWith(filterListsNames[y].trim().toLowerCase())) {
+                                                    if (!card.name.toLowerCase().stringContains(filterListsNames[y].trim().toLowerCase())) {
                                                         accept = false;
                                                     } else {
                                                         accept = true;
@@ -1312,7 +1322,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                     for (var y = 0; y < filterListsNames.length; y++) {
                                                         if (accept)
                                                             continue;
-                                                        if (!label.name.toLowerCase().startsWith(filterListsNames[y].trim().toLowerCase())) {
+                                                        if (!label.name.toLowerCase().stringContains(filterListsNames[y].trim().toLowerCase())) {
                                                             accept = false;
                                                         } else {
                                                             accept = true;
@@ -1475,14 +1485,14 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             } // default
                                             var allnameListDone = nameListDone.split(',');
                                             for (var nd = 0; nd < allnameListDone.length; nd++) {
-                                                // console.log(nd + ') ' + allnameListDone[nd]);
+                                                // console.log('Done check ' + nd + ') ' + allnameListDone[nd]);
                                                 if (memberDone === "") {
                                                     //Find out when the card was most recently moved to any list whose name starts with "Done" (ignore case, e.g. 'done' or 'DONE' or 'DoNe')
                                                     query = Enumerable.From(card.actions)
                                                         .Where(function(x) {
                                                             if (x.data.card && x.data.listAfter) {
                                                                 var listAfterName = x.data.listAfter.name;
-                                                                return x.data.card.id == card.id && listAfterName.toLowerCase().startsWith(allnameListDone[nd].trim().toLowerCase());
+                                                                return x.data.card.id == card.id && listAfterName.toLowerCase().stringContains(allnameListDone[nd].trim().toLowerCase());
                                                             }
                                                         })
                                                         .OrderByDescending(function(x) {

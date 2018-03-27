@@ -151,8 +151,13 @@
 * Whatsnew for v. 1.9.40:
     - https://github.com/trapias/TrelloExport/issues/28 ok with Done prefix
     - contains vs startsWith filters
+* Whatsnew for v. 1.9.41:
+    - persist TrelloExport options to localStorage: CSS, selected export mode, selected export type, name of 'Done' list (issue #24)
+    - fix due date locale
+    - expand flag to export archived cards to all kind of items, and filter consequently
+    - list boards from all available organizations with the "multiple boards" export type
 */
-var VERSION = '1.9.40';
+var VERSION = '1.9.41';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -498,9 +503,25 @@ function TrelloExportOptions() {
         options.push(o);
     }
 
+    var theCSS = 'http://trapias.github.io/assets/TrelloExport/default.css';
+    if (localStorage.TrelloExportCSS)
+        theCSS = localStorage.TrelloExportCSS;
+
+    var selectedMode = 'XLSX';
+    if (localStorage.TrelloExportMode)
+        selectedMode = localStorage.TrelloExportMode;
+
+    // nameListDone
+    if (localStorage.TrelloExportListDone)
+        nameListDone = localStorage.TrelloExportListDone;
+
+    var selectedType = 'board';
+    if (localStorage.TrelloExportType)
+        selectedType = localStorage.TrelloExportType;
+
     var sDialog = '<table id="optionslist">' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
-        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived cards">Archived cards ' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived items">Archived items ' +
         '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments  <input type="checkbox" id="customfields" title="Export Custom Fields">Custom Fields</td></tr>' +
         '<tr id="cklAsRowsRow"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Create one Excel row per each card, checklist item, label or card member">One row per each:</span></td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
         '<tr id="xlsColumns">' +
@@ -508,7 +529,7 @@ function TrelloExportOptions() {
         '<td><select multiple="multiple" id="selectedColumns">' + options.join('') + '</select></td>' +
         '</tr>' +
         '<tr id="ckHTMLCardInfoRow" style="display:none"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set options for the target HTML">Options:</span></td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images' +
-        '<br/>Stylesheet: <input id="trelloExportCss" type="text" name="css" value="http://trapias.github.io/assets/TrelloExport/default.css"> ' + '</td></tr>' +
+        '<br/>Stylesheet: <input id="trelloExportCss" type="text" name="css" value="' + theCSS + '"> ' + '</td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set the List name prefix used to recognize your completed lists. See http://trapias.github.io/blog/trelloexport-1-9-13">Done lists name:</span></td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose what data to export">Type of export:</span></td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Only include items whose name starts with the specified prefix">Filter:</span></td><td>' +
@@ -527,7 +548,9 @@ function TrelloExportOptions() {
                     callback: function() {
 
                         nameListDone = $('#setnameListDone').val();
+                        localStorage.TrelloExportListDone = nameListDone;
                         var mode = $('#exportmode').val();
+                        localStorage.TrelloExportMode = mode;
                         var sfilterListsNames, filters, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages;
                         bexportArchived = $('#exportArchived').is(':checked');
                         bExportComments = $('#comments').is(':checked');
@@ -545,6 +568,7 @@ function TrelloExportOptions() {
                         }
                         // export type
                         var sexporttype = $('#exporttype').val();
+                        localStorage.TrelloExportType = sexporttype;
                         switch (sexporttype) {
                             case 'list':
                                 if ($('#choosenlist').length <= 0) {
@@ -614,6 +638,8 @@ function TrelloExportOptions() {
                         });
 
                         var css = $('#trelloExportCss').val();
+                        localStorage.TrelloExportCSS = css;
+                        // console.log('save ' + css);
 
                         // filterMode
                         var filterMode = $('#filterMode').val();
@@ -647,6 +673,7 @@ function TrelloExportOptions() {
 
         $('#exporttype').on('change', function() {
             var sexporttype = $('#exporttype').val();
+            localStorage.TrelloExportType = sexporttype;
             var sSelect;
             resetOptions();
 
@@ -686,8 +713,12 @@ function TrelloExportOptions() {
 
         });
 
+        if (selectedMode)
+            $('#exportmode').val(selectedMode);
+
         $('#exportmode').on('change', function() {
             var mode = $('#exportmode').val();
+            localStorage.TrelloExportMode = mode;
             $('#cklAsRowsRow').hide();
             $('#ckHTMLCardInfoRow').hide();
             $('#xlsColumns').hide();
@@ -724,6 +755,12 @@ function TrelloExportOptions() {
         $('#customfields').click(function() {
             setColumnHeadings($('input[name=asrows]:checked').val());
         });
+
+
+        if (selectedType) {
+            $('#exporttype').val(selectedType);
+            $('#exporttype').trigger('change');
+        }
 
         // todo: show progress
         //
@@ -897,6 +934,7 @@ function resetOptions() {
 function getalllistsinboard() {
     var apiURL = "https://trello.com/1/boards/" + idBoard + "?lists=all&cards=none";
     var sHtml = "";
+    var bexportArchived = $('#exportArchived').is(':checked');
 
     $.ajax({
             url: apiURL,
@@ -905,6 +943,10 @@ function getalllistsinboard() {
         .done(function(data) {
             // console.log('DATA:' + JSON.stringify(data));
             $.each(data.lists, function(key, list) {
+
+                if (!bexportArchived && list.closed)
+                    return;
+
                 var list_id = list.id;
                 var listName = list.name;
                 if (!list.closed) {
@@ -915,7 +957,7 @@ function getalllistsinboard() {
             });
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
-            console.log("getalllistsinboard error!!!");
+            console.error("getalllistsinboard error: " + jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText);
             $.growl.error({
                 title: "TrelloExport",
                 message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
@@ -927,6 +969,41 @@ function getalllistsinboard() {
         });
 
     return sHtml;
+}
+
+
+function getorganizations() {
+    var apiURL = "https://trello.com/1/members/me/organizations";
+    var orgID = []; //[{ id: null, displayName: 'Private Boards' }];
+
+    $.ajax({
+            url: apiURL,
+            async: false,
+        })
+        .done(function(data) {
+            //console.log('getorganizations DATA:' + JSON.stringify(data));
+            $.each(data, function(key, org) {
+                orgID.push({ id: org.id, displayName: org.displayName });
+                // console.log('ORG: ' + Object.keys(org));
+                // console.log('org = ' + org.displayName + ' with ' + org.idBoards.length + ' boards');
+
+            });
+            orgID.push({ id: null, displayName: 'Personal Boards' });
+
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            console.error("getorganizations: " + textStatus);
+            $.growl.error({
+                title: "TrelloExport",
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
+                fixed: true
+            });
+        })
+        .always(function() {
+            // console.log("complete");
+        });
+
+    return orgID;
 }
 
 function getorganizationid() {
@@ -942,7 +1019,7 @@ function getorganizationid() {
             orgID = data.idOrganization;
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
-            console.log("getorganizationid error!!!");
+            console.error("getorganizationid: " + textStatus);
             $.growl.error({
                 title: "TrelloExport",
                 message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
@@ -958,43 +1035,63 @@ function getorganizationid() {
 
 function getallboards() {
 
-    var orgID = getorganizationid();
-
-    // GET /1/organizations/[idOrg or name]/boards
-    var apiURL = "https://trello.com/1/organizations/" + orgID + "/boards?lists=none&fields=name,idOrganization,closed";
+    var allIDs = getorganizations();
     var sHtml = "";
+    var tmpIDs = [];
 
-    if (orgID === null) {
-        // current board outside any organization, get all boards
-        apiURL = "https://trello.com/1/members/me/boards?lists=none&fields=name,idOrganization,closed";
-    }
+    allIDs.forEach(function(oid) {
+        // console.log('oid: ' + oid.id + ' = ' + oid.displayName);
 
-    $.ajax({
-            url: apiURL,
-            async: false,
-        })
-        .done(function(data) {
-            for (var i = 0; i < data.length; i++) {
-                var board_id = data[i].id;
-                var boardName = data[i].name;
-                if (!data[i].closed) {
-                    sHtml += '<option value="' + board_id + '">' + boardName + '</option>';
-                } else {
-                    sHtml += '<option value="' + board_id + '">' + boardName + ' [Archived]</option>';
+        // GET /1/organizations/[idOrg or name]/boards
+        var apiURL = "https://trello.com/1/organizations/" + oid.id + "/boards?lists=none&fields=name,idOrganization,closed";
+
+        if (oid.id === null) {
+            // current board outside any organization, get all boards
+            apiURL = "https://trello.com/1/members/me/boards?lists=none&fields=name,idOrganization,closed";
+        }
+
+        $.ajax({
+                url: apiURL,
+                async: false,
+            })
+            .done(function(data) {
+
+                var bexportArchived = $('#exportArchived').is(':checked');
+                for (var i = 0; i < data.length; i++) {
+
+                    if (!bexportArchived && data[i].closed)
+                        continue;
+
+                    var board_id = data[i].id;
+                    if ($.inArray(board_id, tmpIDs) > -1)
+                        continue;
+
+                    tmpIDs.push(board_id);
+                    var boardName = data[i].name;
+                    if (!data[i].closed) {
+                        sHtml += '<option value="' + board_id + '">[' + oid.displayName + '] ' + boardName + '</option>';
+                    } else {
+                        sHtml += '<option value="' + board_id + '">[' + oid.displayName + '] ' + boardName + ' [Archived]</option>';
+                    }
                 }
-            }
-        })
-        .fail(function(jqXHR, textStatus, errorThrown) {
-            console.log("getallboards error: " + jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText);
-            $.growl.error({
-                title: "TrelloExport",
-                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
-                fixed: true
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                console.log("getallboards error: " + jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText);
+                $.growl.error({
+                    title: "TrelloExport",
+                    message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
+                    fixed: true
+                });
+            })
+            .always(function() {
+                // console.log("complete");
             });
-        })
-        .always(function() {
-            // console.log("complete");
-        });
+
+
+    });
+
+    // var orgID = getorganizationid();
+
 
     return sHtml;
 }
@@ -1036,8 +1133,14 @@ function getallcardsinlist(listid) {
             async: false,
         })
         .done(function(data) {
+            var bexportArchived = $('#exportArchived').is(':checked');
+
             // console.log('Got cards: ' + JSON.stringify(data));
             for (var i = 0; i < data.length; i++) {
+
+                if (!bexportArchived && data[i].closed)
+                    continue;
+
                 var card_id = data[i].id;
                 var cardName = data[i].name;
                 if (!data[i].closed) {
@@ -1132,7 +1235,6 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                     //     }
                     // }
 
-                    // This iterates through each list and builds the dataset
                     $.each(data, function(key, list) {
 
                         var sBefore = ''; // reset for each list
@@ -1142,7 +1244,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                         if (!bexportArchived) {
                             if (list.closed) {
-                                console.log('skip archived list ' + listName);
+                                // console.log('skip archived list ' + listName);
                                 return true;
                             }
                         }
@@ -1168,7 +1270,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                             }
                         }
                         if (!accept) {
-                            console.log('skipping list ' + listName);
+                            // console.log('skipping list ' + listName);
                             return true;
                         }
 
@@ -1781,7 +1883,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                 toStringArray.push(card.LastActivity);
                                 break;
                             case 20:
-                                toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                 break;
                             case 21:
                                 toStringArray.push(card.datetimeDone);
@@ -1902,7 +2004,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                             toStringArray.push(card.LastActivity);
                                             break;
                                         case 24:
-                                            toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                            toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                             break;
                                         case 25:
                                             toStringArray.push(card.datetimeDone);
@@ -2020,7 +2122,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push(card.LastActivity);
                                     break;
                                 case 24:
-                                    toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                     break;
                                 case 25:
                                     toStringArray.push(card.datetimeDone);
@@ -2128,7 +2230,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         toStringArray.push(card.LastActivity);
                                         break;
                                     case 20:
-                                        toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                        toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                         break;
                                     case 21:
                                         toStringArray.push(card.datetimeDone);
@@ -2245,7 +2347,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push(card.LastActivity);
                                     break;
                                 case 24:
-                                    toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                     break;
                                 case 25:
                                     toStringArray.push(card.datetimeDone);
@@ -2353,7 +2455,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         toStringArray.push(card.LastActivity);
                                         break;
                                     case 20:
-                                        toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                        toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                         break;
                                     case 21:
                                         toStringArray.push(card.datetimeDone);
@@ -2470,7 +2572,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push(card.LastActivity);
                                     break;
                                 case 24:
-                                    toStringArray.push((card.due !== '' ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                     break;
                                 case 25:
                                     toStringArray.push(card.datetimeDone);

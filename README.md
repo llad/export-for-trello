@@ -11,6 +11,16 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.41
+
+Released 03/27/2018:
+
+- persist TrelloExport options to localStorage: CSS, selected export mode, selected export type, name of 'Done' list (([issue #24](https://github.com/trapias/TrelloExport/issues/24)))
+- fix due date locale
+- expand flag to export archived cards to all kind of items, and filter consequently
+- list boards from all available organizations with the "multiple boards" export type
+
+    
 
 ### Version 1.9.40
 

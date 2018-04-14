@@ -156,8 +156,11 @@
     - fix due date locale
     - expand flag to export archived cards to all kind of items, and filter consequently
     - list boards from all available organizations with the "multiple boards" export type
+* Whatsnew for v. 1.9.42:
+    - new organization name column in Excel exports (issue https://github.com/trapias/TrelloExport/issues/30)
+    - custom fields working again following Trello API changes (issue https://github.com/trapias/TrelloExport/issues/31), but not for multiple boards
 */
-var VERSION = '1.9.41';
+var VERSION = '1.9.42';
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -631,6 +634,7 @@ function TrelloExportOptions() {
                         }
 
                         var allColumns = $('#selectedColumns option');
+                        // console.log('allColumns = ' + JSON.stringify(allColumns));
                         var selectedColumns = [];
                         var selectedOptions = $('#selectedColumns option:selected');
                         selectedOptions.each(function() {
@@ -688,6 +692,8 @@ function TrelloExportOptions() {
                     break;
                 case 'boards':
                     // get a list of all boards
+                    $('#customfields').attr('checked', false); // custom fields not yet available for multiple boards
+                    $('#customfields').attr('disabled', true);
                     sSelect = getallboards();
                     $('#optionslist').append('<tr><td>Select one or more Boards</td><td><select multiple id="choosenboards">' + sSelect + '</select></td></tr>');
                     $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr>');
@@ -774,7 +780,7 @@ function setColumnHeadings(asrowsMode) {
     switch (Number(asrowsMode)) {
         case 1: // checklist item
             columnHeadings = [
-                'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                'Organization', 'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
                 'Total Checklist items', 'Completed Checklist items', 'Checklist',
                 'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
@@ -784,7 +790,7 @@ function setColumnHeadings(asrowsMode) {
             break;
         case 2: // label
             columnHeadings = [
-                'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                'Organization', 'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
                 'Total Checklist items', 'Completed Checklist items', 'Checklists',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
                 'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
@@ -793,7 +799,7 @@ function setColumnHeadings(asrowsMode) {
             break;
         case 3: // member
             columnHeadings = [
-                'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                'Organization', 'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
                 'Total Checklist items', 'Completed Checklist items', 'Checklists',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
                 'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
@@ -803,7 +809,7 @@ function setColumnHeadings(asrowsMode) {
         default:
             // card
             columnHeadings = [
-                'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
+                'Organization', 'Board', 'List', 'Card #', 'Title', 'Link', 'Description',
                 'Total Checklist items', 'Completed Checklist items', 'Checklists',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
                 'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
@@ -840,84 +846,79 @@ function setColumnHeadings(asrowsMode) {
 // append custom fields to column headings
 function loadCustomFields(columnHeadings) {
     $.ajax({
-        url: 'https://trello.com/1/boards/' + idBoard + '/pluginData',
+        url: 'https://trello.com/1/boards/' + idBoard + '/customfields',
         dataType: 'json',
         async: false,
         success: function(pdata) {
             if (pdata !== undefined) {
                 for (var f = 0; f < pdata.length; f++) {
                     // console.log(JSON.stringify(pdata[f]));
-                    // console.log('customFields pdata[' + f + '].value  = ' + pdata[f].value);
-                    var ffo = JSON.parse(pdata[f].value);
-                    if (ffo.fields !== undefined) {
-                        for (var fi = 0; fi < ffo.fields.length; fi++) {
-                            console.log('Add custom field ' + ffo.fields[fi].n);
-                            columnHeadings.push(ffo.fields[fi].n);
-                            customFields.push(ffo.fields[fi]);
-                        }
-                    }
+                    customFields.push(pdata[f]);
+                    columnHeadings.push(pdata[f].name);
                 }
             }
         }
     });
 }
 
-function loadCardPluginData(cardID) {
-    // console.log('loadCardPluginData ' + cardID);
+function loadCardCustomFields(cardID) {
     var rc = [];
 
     $.ajax({
-        url: 'https://trello.com/1/cards/' + cardID + '/pluginData',
+        url: 'https://trello.com/1/cards/' + cardID + '/customFieldItems',
         dataType: 'json',
         async: false,
         success: function(pdata) {
-            for (var f = 0; f < pdata.length; f++) {
-                var ffo = JSON.parse(pdata[f].value);
-                for (var key in ffo.fields) {
-                    var value = ffo.fields[key];
-                    var colData = getPluginData(key);
-                    if (colData !== null) {
-                        //t: 0=text, 1=number, 2=checkbox, 3=date, 4=dropdown
-                        switch (Number(colData.t)) {
-                            case 2, 4:
-                                // lookup value
-                                value = lookupCustomDataValue(key, value);
-                                break;
-                        }
-                        rc.push({ colName: colData.n, value: value });
-                    }
-                }
-            }
+
+            pdata.forEach(function(dv) {
+                var theValue = dv.value;
+                if (!theValue)
+                    theValue = dv.idValue;
+
+                var oVal = lookupCustomDataValue(dv.idCustomField, theValue);
+                rc.push({ colName: oVal.name, value: oVal.value });
+            });
             return rc;
         }
     });
     return rc;
 }
 
-function lookupCustomDataValue(key, valueid) {
-    // console.log('lookupCustomDataValue ' + key + ' ID ' + valueid);
-    var v = null;
-    customFields.some(function(cf) {
-        if (cf.id.toString().trim() === key.toString().trim()) {
-            // get options
-            cf.o.forEach(function(o) {
-                if (o.id === valueid) {
-                    v = o.value;
-                    return v;
-                }
-            });
-            return v;
-        }
-    });
-    return v;
-}
+function lookupCustomDataValue(key, cardCFValue) {
 
-function getPluginData(key) {
+    if (!cardCFValue) {
+        console.error('lookupCustomDataValue: card CF value for card ' + key + ' NOT AVAILABLE: ' + cardCFValue);
+        return null;
+    }
     var v = null;
     customFields.some(function(cf) {
         if (cf.id.toString().trim() === key.toString().trim()) {
-            v = cf;
-            return cf;
+
+            switch (cf.type) {
+                case 'checkbox':
+                    v = { name: cf.name, value: cardCFValue.checked };
+                    break;
+
+                case 'date':
+                    v = { name: cf.name, value: (cardCFValue[cf.type] ? new Date(cardCFValue[cf.type]).toLocaleString() : null) };
+                    break;
+
+                case 'list':
+                    v = { name: cf.name, value: cardCFValue };
+                    $.each(cf.options, function(k, opt) {
+                        if (cf.id === opt.idCustomField && opt.id === cardCFValue) {
+                            v = { name: cf.name, value: opt.value.text };
+                            return;
+                        }
+                    });
+                    break;
+
+                default:
+                    v = { name: cf.name, value: cardCFValue[cf.type] };
+                    break;
+            }
+
+            return v;
         }
     });
     return v;
@@ -929,6 +930,8 @@ function resetOptions() {
     $('#choosenCards').parent().parent().remove();
     $('#choosenSinglelist').parent().parent().remove();
     $('#filterListsNames').parent().parent().remove();
+    $('#customfields').attr('checked', false);
+    $('#customfields').attr('disabled', false);
 }
 
 function getalllistsinboard() {
@@ -1096,20 +1099,20 @@ function getallboards() {
     return sHtml;
 }
 
-function getBoardName(id) {
+function getBoardData(id) {
 
-    var apiURL = "https://trello.com/1/boards/" + id + "?fields=name";
-    var sName = "";
+    var apiURL = "https://trello.com/1/boards/" + id + "?fields=name,idOrganization";
+    var bData = "";
 
     $.ajax({
             url: apiURL,
             async: false,
         })
         .done(function(data) {
-            sName = data.name;
+            bData = data;
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
-            console.log("getBoardName error!!!");
+            console.error("getBoardData error: " + textStatus);
             $.growl.error({
                 title: "TrelloExport",
                 message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
@@ -1120,7 +1123,7 @@ function getBoardName(id) {
             // console.log("complete");
         });
 
-    return sName;
+    return bData;
 }
 
 function getallcardsinlist(listid) {
@@ -1166,11 +1169,11 @@ function getallcardsinlist(listid) {
 }
 
 function extractFloat(str, regex, groupIndex) {
-    var value = ''
+    var value = '';
     var match = str.match(regex);
     if (match !== null) {
         value = parseFloat(match[groupIndex]);
-        if (!!value === false) {
+        if (value === false) {
             value = '';
         }
     }
@@ -1195,6 +1198,9 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
     promLoadData.then(function() {
 
+        var oOrganizations = getorganizations();
+        // console.log('oOrganizations = ' + JSON.stringify(oOrganizations));
+
         var jsonComputedCards = [];
 
         // RegEx to find the Trello Plus Spent and Estimate (spent/estimate) in card titles
@@ -1215,7 +1221,13 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
         for (var iBoard = 0; iBoard < exportboards.length; iBoard++) {
             console.log('Export board ' + exportboards[iBoard]);
             idBoard = exportboards[iBoard];
-            var boardName = getBoardName(idBoard);
+
+            var boardData = getBoardData(idBoard);
+            var boardName = boardData.name;
+            var orgName = '';
+            var oOData = oOrganizations.find(function(obj) { return obj.id === boardData.idOrganization; });
+            if (oOData)
+                orgName = oOData.displayName;
 
             var readCards = 0;
 
@@ -1458,7 +1470,6 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                     // console.log('PARSE ' + checklistid);
                                                     $.each(card.checklists, function(key, list) {
                                                         var list_id = list.id;
-                                                        //console.log('found ' + list_id);
                                                         if (list_id == checklistid) {
                                                             var jsonCheckList = {};
                                                             jsonCheckList.name = list.name;
@@ -1642,6 +1653,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             var dateLastActivity = new Date(card.dateLastActivity);
 
                                             var rowData = {
+                                                'organizationName': orgName,
                                                 'boardName': boardName,
                                                 'listName': listName,
                                                 'cardID': card.idShort,
@@ -1675,7 +1687,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                             if (bExportCustomFields) {
                                                 // load custom fields values for card
-                                                var cfVals = loadCardPluginData(card.id);
+                                                var cfVals = loadCardCustomFields(card.id);
 
                                                 cfVals.forEach(function(dv) {
                                                     // console.log('LOADED CF ' + dv.colName + ' = ' + dv.value);
@@ -1823,81 +1835,84 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                         switch (nCol) {
                             case 0:
-                                toStringArray.push(card.boardName);
+                                toStringArray.push(card.organizationName);
                                 break;
                             case 1:
-                                toStringArray.push(card.listName);
+                                toStringArray.push(card.boardName);
                                 break;
                             case 2:
-                                toStringArray.push(card.cardID);
+                                toStringArray.push(card.listName);
                                 break;
                             case 3:
-                                toStringArray.push(card.title);
+                                toStringArray.push(card.cardID);
                                 break;
                             case 4:
-                                toStringArray.push(card.shortLink);
+                                toStringArray.push(card.title);
                                 break;
                             case 5:
-                                toStringArray.push(card.cardDescription);
+                                toStringArray.push(card.shortLink);
                                 break;
                             case 6:
-                                toStringArray.push(card.nTotalCheckListItems);
+                                toStringArray.push(card.cardDescription);
                                 break;
                             case 7:
-                                toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                toStringArray.push(card.nTotalCheckListItems);
                                 break;
                             case 8:
-                                toStringArray.push(card.checkLists);
+                                toStringArray.push(card.nTotalCheckListItemsCompleted);
                                 break;
                             case 9:
-                                toStringArray.push(card.numberOfComments);
+                                toStringArray.push(card.checkLists);
                                 break;
                             case 10:
-                                toStringArray.push(card.comments);
+                                toStringArray.push(card.numberOfComments);
                                 break;
                             case 11:
-                                toStringArray.push(card.attachments);
+                                toStringArray.push(card.comments);
                                 break;
                             case 12:
-                                toStringArray.push(card.votes);
+                                toStringArray.push(card.attachments);
                                 break;
                             case 13:
-                                toStringArray.push(card.spent);
+                                toStringArray.push(card.votes);
                                 break;
                             case 14:
-                                toStringArray.push(card.estimate);
+                                toStringArray.push(card.spent);
                                 break;
                             case 15:
-                                toStringArray.push(card.points_estimate);
+                                toStringArray.push(card.estimate);
                                 break;
                             case 16:
-                                toStringArray.push(card.points_consumed);
+                                toStringArray.push(card.points_estimate);
                                 break;
                             case 17:
-                                toStringArray.push(card.datetimeCreated);
+                                toStringArray.push(card.points_consumed);
                                 break;
                             case 18:
-                                toStringArray.push(card.memberCreator);
+                                toStringArray.push(card.datetimeCreated);
                                 break;
                             case 19:
-                                toStringArray.push(card.LastActivity);
+                                toStringArray.push(card.memberCreator);
                                 break;
                             case 20:
-                                toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                toStringArray.push(card.LastActivity);
                                 break;
                             case 21:
-                                toStringArray.push(card.datetimeDone);
+                                toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                 break;
                             case 22:
-                                toStringArray.push(card.memberDone);
+                                toStringArray.push(card.datetimeDone);
                                 break;
                             case 23:
-                                toStringArray.push(card.completionTime);
+                                toStringArray.push(card.memberDone);
                                 break;
                             case 24:
-                                toStringArray.push(card.memberInitials);
+                                toStringArray.push(card.completionTime);
                                 break;
                             case 25:
+                                toStringArray.push(card.memberInitials);
+                                break;
+                            case 26:
                                 toStringArray.push(card.labels.toString());
                                 break;
 
@@ -1932,93 +1947,96 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                                     switch (nCol) {
                                         case 0:
-                                            toStringArray.push(card.boardName);
+                                            toStringArray.push(card.organizationName);
                                             break;
                                         case 1:
-                                            toStringArray.push(card.listName);
+                                            toStringArray.push(card.boardName);
                                             break;
                                         case 2:
-                                            toStringArray.push(card.cardID);
+                                            toStringArray.push(card.listName);
                                             break;
                                         case 3:
-                                            toStringArray.push(card.title);
+                                            toStringArray.push(card.cardID);
                                             break;
                                         case 4:
-                                            toStringArray.push(card.shortLink);
+                                            toStringArray.push(card.title);
                                             break;
                                         case 5:
-                                            toStringArray.push(card.cardDescription);
+                                            toStringArray.push(card.shortLink);
                                             break;
                                         case 6:
-                                            toStringArray.push(card.nTotalCheckListItems);
+                                            toStringArray.push(card.cardDescription);
                                             break;
                                         case 7:
-                                            toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                            toStringArray.push(card.nTotalCheckListItems);
                                             break;
                                         case 8:
-                                            toStringArray.push(list.name);
+                                            toStringArray.push(card.nTotalCheckListItemsCompleted);
                                             break;
                                         case 9:
-                                            toStringArray.push(it.name);
+                                            toStringArray.push(list.name);
                                             break;
                                         case 10:
-                                            toStringArray.push(it.completed);
+                                            toStringArray.push(it.name);
                                             break;
                                         case 11:
-                                            toStringArray.push(it.completedDate);
+                                            toStringArray.push(it.completed);
                                             break;
                                         case 12:
-                                            toStringArray.push(it.completedBy);
+                                            toStringArray.push(it.completedDate);
                                             break;
                                         case 13:
-                                            toStringArray.push(card.numberOfComments);
+                                            toStringArray.push(it.completedBy);
                                             break;
                                         case 14:
-                                            toStringArray.push(card.comments);
+                                            toStringArray.push(card.numberOfComments);
                                             break;
                                         case 15:
-                                            toStringArray.push(card.attachments);
+                                            toStringArray.push(card.comments);
                                             break;
                                         case 16:
-                                            toStringArray.push(card.votes);
+                                            toStringArray.push(card.attachments);
                                             break;
                                         case 17:
-                                            toStringArray.push(card.spent);
+                                            toStringArray.push(card.votes);
                                             break;
                                         case 18:
-                                            toStringArray.push(card.estimate);
+                                            toStringArray.push(card.spent);
                                             break;
                                         case 19:
-                                            toStringArray.push(card.points_estimate);
+                                            toStringArray.push(card.estimate);
                                             break;
                                         case 20:
-                                            toStringArray.push(card.points_consumed);
+                                            toStringArray.push(card.points_estimate);
                                             break;
                                         case 21:
-                                            toStringArray.push(card.datetimeCreated);
+                                            toStringArray.push(card.points_consumed);
                                             break;
                                         case 22:
-                                            toStringArray.push(card.memberCreator);
+                                            toStringArray.push(card.datetimeCreated);
                                             break;
                                         case 23:
-                                            toStringArray.push(card.LastActivity);
+                                            toStringArray.push(card.memberCreator);
                                             break;
                                         case 24:
-                                            toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                            toStringArray.push(card.LastActivity);
                                             break;
                                         case 25:
-                                            toStringArray.push(card.datetimeDone);
+                                            toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                             break;
                                         case 26:
-                                            toStringArray.push(card.memberDone);
+                                            toStringArray.push(card.datetimeDone);
                                             break;
                                         case 27:
-                                            toStringArray.push(card.completionTime);
+                                            toStringArray.push(card.memberDone);
                                             break;
                                         case 28:
-                                            toStringArray.push(card.memberInitials);
+                                            toStringArray.push(card.completionTime);
                                             break;
                                         case 29:
+                                            toStringArray.push(card.memberInitials);
+                                            break;
+                                        case 30:
                                             toStringArray.push(card.labels.toString());
                                             break;
                                         default:
@@ -2050,31 +2068,31 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                             switch (nCol) {
                                 case 0:
-                                    toStringArray.push(card.boardName);
+                                    toStringArray.push(card.organizationName);
                                     break;
                                 case 1:
-                                    toStringArray.push(card.listName);
+                                    toStringArray.push(card.boardName);
                                     break;
                                 case 2:
-                                    toStringArray.push(card.cardID);
+                                    toStringArray.push(card.listName);
                                     break;
                                 case 3:
-                                    toStringArray.push(card.title);
+                                    toStringArray.push(card.cardID);
                                     break;
                                 case 4:
-                                    toStringArray.push(card.shortLink);
+                                    toStringArray.push(card.title);
                                     break;
                                 case 5:
-                                    toStringArray.push(card.cardDescription);
+                                    toStringArray.push(card.shortLink);
                                     break;
                                 case 6:
-                                    toStringArray.push(card.nTotalCheckListItems);
+                                    toStringArray.push(card.cardDescription);
                                     break;
                                 case 7:
-                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    toStringArray.push(card.nTotalCheckListItems);
                                     break;
                                 case 8:
-                                    toStringArray.push('');
+                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
                                     break;
                                 case 9:
                                     toStringArray.push('');
@@ -2089,54 +2107,57 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push('');
                                     break;
                                 case 13:
-                                    toStringArray.push(card.numberOfComments);
+                                    toStringArray.push('');
                                     break;
                                 case 14:
-                                    toStringArray.push(card.comments);
+                                    toStringArray.push(card.numberOfComments);
                                     break;
                                 case 15:
-                                    toStringArray.push(card.attachments);
+                                    toStringArray.push(card.comments);
                                     break;
                                 case 16:
-                                    toStringArray.push(card.votes);
+                                    toStringArray.push(card.attachments);
                                     break;
                                 case 17:
-                                    toStringArray.push(card.spent);
+                                    toStringArray.push(card.votes);
                                     break;
                                 case 18:
-                                    toStringArray.push(card.estimate);
+                                    toStringArray.push(card.spent);
                                     break;
                                 case 19:
-                                    toStringArray.push(card.points_estimate);
+                                    toStringArray.push(card.estimate);
                                     break;
                                 case 20:
-                                    toStringArray.push(card.points_consumed);
+                                    toStringArray.push(card.points_estimate);
                                     break;
                                 case 21:
-                                    toStringArray.push(card.datetimeCreated);
+                                    toStringArray.push(card.points_consumed);
                                     break;
                                 case 22:
-                                    toStringArray.push(card.memberCreator);
+                                    toStringArray.push(card.datetimeCreated);
                                     break;
                                 case 23:
-                                    toStringArray.push(card.LastActivity);
+                                    toStringArray.push(card.memberCreator);
                                     break;
                                 case 24:
-                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    toStringArray.push(card.LastActivity);
                                     break;
                                 case 25:
-                                    toStringArray.push(card.datetimeDone);
+                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                     break;
                                 case 26:
-                                    toStringArray.push(card.memberDone);
+                                    toStringArray.push(card.datetimeDone);
                                     break;
                                 case 27:
-                                    toStringArray.push(card.completionTime);
+                                    toStringArray.push(card.memberDone);
                                     break;
                                 case 28:
-                                    toStringArray.push(card.memberInitials);
+                                    toStringArray.push(card.completionTime);
                                     break;
                                 case 29:
+                                    toStringArray.push(card.memberInitials);
+                                    break;
+                                case 30:
                                     toStringArray.push(card.labels.toString());
                                     break;
                                 default:
@@ -2170,81 +2191,84 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                                 switch (nCol) {
                                     case 0:
-                                        toStringArray.push(card.boardName);
+                                        toStringArray.push(card.organizationName);
                                         break;
                                     case 1:
-                                        toStringArray.push(card.listName);
+                                        toStringArray.push(card.boardName);
                                         break;
                                     case 2:
-                                        toStringArray.push(card.cardID);
+                                        toStringArray.push(card.listName);
                                         break;
                                     case 3:
-                                        toStringArray.push(card.title);
+                                        toStringArray.push(card.cardID);
                                         break;
                                     case 4:
-                                        toStringArray.push(card.shortLink);
+                                        toStringArray.push(card.title);
                                         break;
                                     case 5:
-                                        toStringArray.push(card.cardDescription);
+                                        toStringArray.push(card.shortLink);
                                         break;
                                     case 6:
-                                        toStringArray.push(card.nTotalCheckListItems);
+                                        toStringArray.push(card.cardDescription);
                                         break;
                                     case 7:
-                                        toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                        toStringArray.push(card.nTotalCheckListItems);
                                         break;
                                     case 8:
-                                        toStringArray.push(card.checkLists);
+                                        toStringArray.push(card.nTotalCheckListItemsCompleted);
                                         break;
                                     case 9:
-                                        toStringArray.push(card.numberOfComments);
+                                        toStringArray.push(card.checkLists);
                                         break;
                                     case 10:
-                                        toStringArray.push(card.comments);
+                                        toStringArray.push(card.numberOfComments);
                                         break;
                                     case 11:
-                                        toStringArray.push(card.attachments);
+                                        toStringArray.push(card.comments);
                                         break;
                                     case 12:
-                                        toStringArray.push(card.votes);
+                                        toStringArray.push(card.attachments);
                                         break;
                                     case 13:
-                                        toStringArray.push(card.spent);
+                                        toStringArray.push(card.votes);
                                         break;
                                     case 14:
-                                        toStringArray.push(card.estimate);
+                                        toStringArray.push(card.spent);
                                         break;
                                     case 15:
-                                        toStringArray.push(card.points_estimate);
+                                        toStringArray.push(card.estimate);
                                         break;
                                     case 16:
-                                        toStringArray.push(card.points_consumed);
+                                        toStringArray.push(card.points_estimate);
                                         break;
                                     case 17:
-                                        toStringArray.push(card.datetimeCreated);
+                                        toStringArray.push(card.points_consumed);
                                         break;
                                     case 18:
-                                        toStringArray.push(card.memberCreator);
+                                        toStringArray.push(card.datetimeCreated);
                                         break;
                                     case 19:
-                                        toStringArray.push(card.LastActivity);
+                                        toStringArray.push(card.memberCreator);
                                         break;
                                     case 20:
-                                        toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                        toStringArray.push(card.LastActivity);
                                         break;
                                     case 21:
-                                        toStringArray.push(card.datetimeDone);
+                                        toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                         break;
                                     case 22:
-                                        toStringArray.push(card.memberDone);
+                                        toStringArray.push(card.datetimeDone);
                                         break;
                                     case 23:
-                                        toStringArray.push(card.completionTime);
+                                        toStringArray.push(card.memberDone);
                                         break;
                                     case 24:
-                                        toStringArray.push(card.memberInitials);
+                                        toStringArray.push(card.completionTime);
                                         break;
                                     case 25:
+                                        toStringArray.push(card.memberInitials);
+                                        break;
+                                    case 26:
                                         toStringArray.push(lbl);
                                         break;
                                     default:
@@ -2275,31 +2299,31 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                             switch (nCol) {
                                 case 0:
-                                    toStringArray.push(card.boardName);
+                                    toStringArray.push(card.organizationName);
                                     break;
                                 case 1:
-                                    toStringArray.push(card.listName);
+                                    toStringArray.push(card.boardName);
                                     break;
                                 case 2:
-                                    toStringArray.push(card.cardID);
+                                    toStringArray.push(card.listName);
                                     break;
                                 case 3:
-                                    toStringArray.push(card.title);
+                                    toStringArray.push(card.cardID);
                                     break;
                                 case 4:
-                                    toStringArray.push(card.shortLink);
+                                    toStringArray.push(card.title);
                                     break;
                                 case 5:
-                                    toStringArray.push(card.cardDescription);
+                                    toStringArray.push(card.shortLink);
                                     break;
                                 case 6:
-                                    toStringArray.push(card.nTotalCheckListItems);
+                                    toStringArray.push(card.cardDescription);
                                     break;
                                 case 7:
-                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    toStringArray.push(card.nTotalCheckListItems);
                                     break;
                                 case 8:
-                                    toStringArray.push('');
+                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
                                     break;
                                 case 9:
                                     toStringArray.push('');
@@ -2314,54 +2338,57 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push('');
                                     break;
                                 case 13:
-                                    toStringArray.push(card.numberOfComments);
+                                    toStringArray.push('');
                                     break;
                                 case 14:
-                                    toStringArray.push(card.comments);
+                                    toStringArray.push(card.numberOfComments);
                                     break;
                                 case 15:
-                                    toStringArray.push(card.attachments);
+                                    toStringArray.push(card.comments);
                                     break;
                                 case 16:
-                                    toStringArray.push(card.votes);
+                                    toStringArray.push(card.attachments);
                                     break;
                                 case 17:
-                                    toStringArray.push(card.spent);
+                                    toStringArray.push(card.votes);
                                     break;
                                 case 18:
-                                    toStringArray.push(card.estimate);
+                                    toStringArray.push(card.spent);
                                     break;
                                 case 19:
-                                    toStringArray.push(card.points_estimate);
+                                    toStringArray.push(card.estimate);
                                     break;
                                 case 20:
-                                    toStringArray.push(card.points_consumed);
+                                    toStringArray.push(card.points_estimate);
                                     break;
                                 case 21:
-                                    toStringArray.push(card.datetimeCreated);
+                                    toStringArray.push(card.points_consumed);
                                     break;
                                 case 22:
-                                    toStringArray.push(card.memberCreator);
+                                    toStringArray.push(card.datetimeCreated);
                                     break;
                                 case 23:
-                                    toStringArray.push(card.LastActivity);
+                                    toStringArray.push(card.memberCreator);
                                     break;
                                 case 24:
-                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    toStringArray.push(card.LastActivity);
                                     break;
                                 case 25:
-                                    toStringArray.push(card.datetimeDone);
+                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                     break;
                                 case 26:
-                                    toStringArray.push(card.memberDone);
+                                    toStringArray.push(card.datetimeDone);
                                     break;
                                 case 27:
-                                    toStringArray.push(card.completionTime);
+                                    toStringArray.push(card.memberDone);
                                     break;
                                 case 28:
-                                    toStringArray.push(card.memberInitials);
+                                    toStringArray.push(card.completionTime);
                                     break;
                                 case 29:
+                                    toStringArray.push(card.memberInitials);
+                                    break;
+                                case 30:
                                     toStringArray.push(card.labels.toString());
                                     break;
                                 default:
@@ -2395,81 +2422,84 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                                 switch (nCol) {
                                     case 0:
-                                        toStringArray.push(card.boardName);
+                                        toStringArray.push(card.organizationName);
                                         break;
                                     case 1:
-                                        toStringArray.push(card.listName);
+                                        toStringArray.push(card.boardName);
                                         break;
                                     case 2:
-                                        toStringArray.push(card.cardID);
+                                        toStringArray.push(card.listName);
                                         break;
                                     case 3:
-                                        toStringArray.push(card.title);
+                                        toStringArray.push(card.cardID);
                                         break;
                                     case 4:
-                                        toStringArray.push(card.shortLink);
+                                        toStringArray.push(card.title);
                                         break;
                                     case 5:
-                                        toStringArray.push(card.cardDescription);
+                                        toStringArray.push(card.shortLink);
                                         break;
                                     case 6:
-                                        toStringArray.push(card.nTotalCheckListItems);
+                                        toStringArray.push(card.cardDescription);
                                         break;
                                     case 7:
-                                        toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                        toStringArray.push(card.nTotalCheckListItems);
                                         break;
                                     case 8:
-                                        toStringArray.push(card.checkLists);
+                                        toStringArray.push(card.nTotalCheckListItemsCompleted);
                                         break;
                                     case 9:
-                                        toStringArray.push(card.numberOfComments);
+                                        toStringArray.push(card.checkLists);
                                         break;
                                     case 10:
-                                        toStringArray.push(card.comments);
+                                        toStringArray.push(card.numberOfComments);
                                         break;
                                     case 11:
-                                        toStringArray.push(card.attachments);
+                                        toStringArray.push(card.comments);
                                         break;
                                     case 12:
-                                        toStringArray.push(card.votes);
+                                        toStringArray.push(card.attachments);
                                         break;
                                     case 13:
-                                        toStringArray.push(card.spent);
+                                        toStringArray.push(card.votes);
                                         break;
                                     case 14:
-                                        toStringArray.push(card.estimate);
+                                        toStringArray.push(card.spent);
                                         break;
                                     case 15:
-                                        toStringArray.push(card.points_estimate);
+                                        toStringArray.push(card.estimate);
                                         break;
                                     case 16:
-                                        toStringArray.push(card.points_consumed);
+                                        toStringArray.push(card.points_estimate);
                                         break;
                                     case 17:
-                                        toStringArray.push(card.datetimeCreated);
+                                        toStringArray.push(card.points_consumed);
                                         break;
                                     case 18:
-                                        toStringArray.push(card.memberCreator);
+                                        toStringArray.push(card.datetimeCreated);
                                         break;
                                     case 19:
-                                        toStringArray.push(card.LastActivity);
+                                        toStringArray.push(card.memberCreator);
                                         break;
                                     case 20:
-                                        toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                        toStringArray.push(card.LastActivity);
                                         break;
                                     case 21:
-                                        toStringArray.push(card.datetimeDone);
+                                        toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                         break;
                                     case 22:
-                                        toStringArray.push(card.memberDone);
+                                        toStringArray.push(card.datetimeDone);
                                         break;
                                     case 23:
-                                        toStringArray.push(card.completionTime);
+                                        toStringArray.push(card.memberDone);
                                         break;
                                     case 24:
-                                        toStringArray.push(mbm);
+                                        toStringArray.push(card.completionTime);
                                         break;
                                     case 25:
+                                        toStringArray.push(mbm);
+                                        break;
+                                    case 26:
                                         toStringArray.push(card.labels.toString());
                                         break;
                                     default:
@@ -2500,31 +2530,31 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                             switch (nCol) {
                                 case 0:
-                                    toStringArray.push(card.boardName);
+                                    toStringArray.push(card.organizationName);
                                     break;
                                 case 1:
-                                    toStringArray.push(card.listName);
+                                    toStringArray.push(card.boardName);
                                     break;
                                 case 2:
-                                    toStringArray.push(card.cardID);
+                                    toStringArray.push(card.listName);
                                     break;
                                 case 3:
-                                    toStringArray.push(card.title);
+                                    toStringArray.push(card.cardID);
                                     break;
                                 case 4:
-                                    toStringArray.push(card.shortLink);
+                                    toStringArray.push(card.title);
                                     break;
                                 case 5:
-                                    toStringArray.push(card.cardDescription);
+                                    toStringArray.push(card.shortLink);
                                     break;
                                 case 6:
-                                    toStringArray.push(card.nTotalCheckListItems);
+                                    toStringArray.push(card.cardDescription);
                                     break;
                                 case 7:
-                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    toStringArray.push(card.nTotalCheckListItems);
                                     break;
                                 case 8:
-                                    toStringArray.push('');
+                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
                                     break;
                                 case 9:
                                     toStringArray.push('');
@@ -2539,54 +2569,57 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push('');
                                     break;
                                 case 13:
-                                    toStringArray.push(card.numberOfComments);
+                                    toStringArray.push('');
                                     break;
                                 case 14:
-                                    toStringArray.push(card.comments);
+                                    toStringArray.push(card.numberOfComments);
                                     break;
                                 case 15:
-                                    toStringArray.push(card.attachments);
+                                    toStringArray.push(card.comments);
                                     break;
                                 case 16:
-                                    toStringArray.push(card.votes);
+                                    toStringArray.push(card.attachments);
                                     break;
                                 case 17:
-                                    toStringArray.push(card.spent);
+                                    toStringArray.push(card.votes);
                                     break;
                                 case 18:
-                                    toStringArray.push(card.estimate);
+                                    toStringArray.push(card.spent);
                                     break;
                                 case 19:
-                                    toStringArray.push(card.points_estimate);
+                                    toStringArray.push(card.estimate);
                                     break;
                                 case 20:
-                                    toStringArray.push(card.points_consumed);
+                                    toStringArray.push(card.points_estimate);
                                     break;
                                 case 21:
-                                    toStringArray.push(card.datetimeCreated);
+                                    toStringArray.push(card.points_consumed);
                                     break;
                                 case 22:
-                                    toStringArray.push(card.memberCreator);
+                                    toStringArray.push(card.datetimeCreated);
                                     break;
                                 case 23:
-                                    toStringArray.push(card.LastActivity);
+                                    toStringArray.push(card.memberCreator);
                                     break;
                                 case 24:
-                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
+                                    toStringArray.push(card.LastActivity);
                                     break;
                                 case 25:
-                                    toStringArray.push(card.datetimeDone);
+                                    toStringArray.push((card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''));
                                     break;
                                 case 26:
-                                    toStringArray.push(card.memberDone);
+                                    toStringArray.push(card.datetimeDone);
                                     break;
                                 case 27:
-                                    toStringArray.push(card.completionTime);
+                                    toStringArray.push(card.memberDone);
                                     break;
                                 case 28:
-                                    toStringArray.push(card.memberInitials);
+                                    toStringArray.push(card.completionTime);
                                     break;
                                 case 29:
+                                    toStringArray.push(card.memberInitials);
+                                    break;
+                                case 30:
                                     toStringArray.push(card.labels.toString());
                                     break;
                                 default:

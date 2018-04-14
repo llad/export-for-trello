@@ -11,6 +11,14 @@ Please open issues on [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.42
+
+Released 04/14/2018:
+
+- new organization name column in Excel exports ([issue #30](https://github.com/trapias/TrelloExport/issues30))
+- custom fields working again following Trello API changes ([issue #31](https://github.com/trapias/TrelloExport/issues30)), but not for 'multiple boards' export option.
+
+
 ### Version 1.9.41
 
 Released 03/27/2018:

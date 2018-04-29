@@ -618,7 +618,7 @@ function TrelloExportOptions() {
 
             // open options dialog to configure & launch export
             $.Zebra_Dialog(sDialog, {
-                title: 'TrelloExport ' + VERSION + ' <span class="blog-link"><a target="_blank" href="http://trapias.github.io/blog/2017/05/12/TrelloExport-1.9.43">Read the Blog post!</a></span>',
+                title: 'TrelloExport ' + VERSION + ' <span class="blog-link"><a target="_blank" href="http://trapias.github.io/blog/2018/04/27/TrelloExport-1.9.43">Read the Blog post!</a></span>',
                 type: false,
                 'buttons': [{
                     caption: 'Export',

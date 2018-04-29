@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html language="{{ data.renderSettings.language }} ">
+<head>
+<title>TrelloExport Newsletter</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.10/css/all.css" integrity="sha384-+d0P83n9kaQMCwj8F4RJB66tzIwOKmrdb46+porD/OvrJ+37WqIM7UoBtwHO6Nlg" crossorigin="anonymous">
+<link type="text/css" rel="stylesheet" href="{{ data.renderSettings.CSS }}">
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col">
+        {% set organizationName = '' %}
+        {% set boardName = '' %}
+        {% set prevList = '' %}
+        {% for card in data.cards %}
+            {% set theLink = '' %}
+            {% if card.boardName != boardName %}
+                <h2>{{ card.boardName }}</h2>
+            {% endif %}
+            {% set boardName = card.boardName %}
+            {% set organizationName = card.organizationName %}
+            {% set curList = card.listName %}
+            {% if prevList != curList %}
+                <h3><i class="far fa-newspaper"></i> {{ curList }}</h3>
+            {% endif %}
+            {% set prevList = card.listName %}
+            {# find attachment which is an URL and set to variable 'theLink' #}
+        {% if card.jsonAttachments|length > 0 %}
+            {% for attach in card.jsonAttachments %}
+                {% if not attach.isUpload %}
+                {% if theLink is empty %}
+                {% set theLink = attach.url %}
+                {% endif %}
+                {% endif %}
+            {% endfor %}        
+        {% endif %}
+            <div class="card">
+                <h4>{{ card.title }}</h4>
+                <div class="description">
+                    <p class="text">{{ card.cardDescription }}</p>
+                    {% if not theLink is empty %}
+                    <a class="btn btn-primary" target="_blank" href="{{ theLink }}">READ MORE</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    </div>
+</div>
+</body>
+</html>

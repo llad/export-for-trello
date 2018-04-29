@@ -1,0 +1,44 @@
+h1,
+h2,
+h3 {
+    padding: 10px;
+    font-weight: bold;
+}
+
+h2 {
+    background-color: grey;
+    color: white;
+    margin-bottom: 20px;
+}
+
+h3 {
+    padding: 5px;
+}
+
+.card {
+    border: solid 1px #ccc;
+    box-shadow: 5px 5px #eee;
+    margin-bottom: 20px;
+    padding: 10px;
+}
+
+.card .info,
+.card .description {
+    padding: 2px;
+}
+
+.card .comments,
+.card .attachments,
+.card .checklists,
+.card .customFields {
+    padding-left: 10px;
+    padding-bottom: 10px;
+}
+
+.card .comment,
+.card .attachment,
+.card .checklist,
+.card .customField {
+    padding-left: 20px;
+    background-color: white;
+}

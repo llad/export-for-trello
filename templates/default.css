@@ -1,0 +1,183 @@
+@import "http://fonts.googleapis.com/css?family=Open+Sans";
+@import "http://fonts.googleapis.com/css?family=Patrick+Hand+SC";
+html,
+body,
+footer,
+.footer {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+}
+
+html {
+    font-size: 100%;
+    font-family: 'Open Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+body {
+    background: #fff;
+    color: #333;
+    font-family: 'Open Sans', sans-serif;
+    min-height: 100vh;
+    padding: 10px;
+}
+
+.TrelloExport {
+    padding: 20px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+legend {
+    font-family: 'Patrick Hand SC';
+    padding: 0;
+    margin: 0;
+}
+
+h1 {
+    background-color: #FFD000;
+    color: black;
+    padding: 10px;
+    font-size: 2em;
+}
+
+h2 {
+    color: #000;
+    padding: 10px;
+    font-size: 1.8em;
+    border: solid 2px #FFD000;
+    margin-top: 20px;
+}
+
+h2:first-of-type {
+    margin-top: 10px
+}
+
+h3 {
+    color: #B229FF;
+    font-size: 1.5em;
+}
+
+h4 {
+    font-size: 1.3em;
+    /* text-decoration: underline; */
+}
+
+p {
+    font-size: 1em;
+}
+
+.clearfix:before,
+.clearfix:after {
+    content: " ";
+    display: table;
+}
+
+.clearfix:after {
+    clear: both;
+}
+
+img {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.FluidYellow {
+    background-color: #FFD000;
+}
+
+a,
+a:visited,
+a:focus {
+    color: #BB2DFF;
+}
+
+.col-md-3 {
+    width: 50%;
+    float: left;
+}
+
+.card {
+    border: solid 1px #ccc;
+    box-shadow: 5px 5px #eee;
+    margin: 10px 0 10px 0;
+    padding: 0 5px;
+}
+
+.card .info:first-of-type {
+    margin-top: 5px
+}
+
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.card h5,
+.card h6,
+.card .info,
+.card .description,
+.card .comments,
+.card .comment,
+.card .attachments,
+.card .attachment,
+.card .checklists,
+.card .checklist,
+.card .customFields,
+.card .customField {
+    padding: 2px;
+    width: auto;
+    max-width: 100%;
+    background-color: white;
+}
+
+.card .customField {
+    margin-left: 10px
+}
+
+.card .description p {
+    padding: 0;
+}
+
+.card .label {
+    display: inline-block;
+    text-transform: uppercase;
+    font-weight: bold;
+    width: auto;
+    min-width: 180px
+}
+
+.comment,
+.attachment {
+    margin: 0
+}
+
+.comment .label,
+.attachment .label,
+.comment .text,
+.attachment .text {
+    text-transform: none;
+    display: block;
+    width: auto;
+    font-weight: bold;
+    border: solid 1px #eee;
+    background-color: #eee;
+    border-radius: 5px;
+    padding: 5px
+}
+
+.comment .text,
+.attachment .text {
+    border: solid 1px white;
+    background-color: white;
+}
+
+.checklists ul li .completed {
+    font-size: .8em
+}

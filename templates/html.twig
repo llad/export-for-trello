@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html language="{{ data.renderSettings.language }} ">
+<head>
+<title>TrelloExport</title>
+<link type="text/css" rel="stylesheet" href="{{ data.renderSettings.CSS }}">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.10/css/all.css" integrity="sha384-+d0P83n9kaQMCwj8F4RJB66tzIwOKmrdb46+porD/OvrJ+37WqIM7UoBtwHO6Nlg" crossorigin="anonymous">
+</head>
+<body class="TrelloExport">
+{% set organizationName = '' %}
+{% set boardName = '' %}
+{% set prevList = '' %}
+{% for card in data.cards %}
+     {% if card.boardName != boardName %}
+        <h1>{{ card.organizationName }} &gt;&gt; {{ card.boardName }}</h1>
+    {% endif %}
+    {% set boardName = card.boardName %}
+    {% set organizationName = card.organizationName %}
+    {% set curList = card.listName %}
+    {% if prevList != curList %}
+        <h2>{{ curList }}</h2>
+    {% endif %}
+    {% set prevList = card.listName %}
+    <div class="card">
+        <h3><a href="{{ card.shortLink }}">{{ card.title }}</a></h3>        
+        <div class="row">
+        <div class="col-md-3">
+            <div class="info">
+                <span class="label">Created:</span>
+                <span class="text">{{ card.datetimeCreated }}</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info">
+                <span class="label">Created By:</span>
+                <span class="text">{{ card.memberCreator }}</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info">
+                <span class="label">Due:</span>
+                <span class="text">{{ card.due }}</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info">
+                <span class="label">Completed:</span>
+                {% if card.dueComplete %}
+                <span class="text"><input type="checkbox" disabled checked></span>
+                {% else %}
+                <span class="text"><input type="checkbox" disabled></span>
+                {% endif %}
+            </div>
+        </div>
+        </div>
+        <div class="description">
+            <span class="label">Description:</span>
+            <p class="text">{{ card.cardDescription }}</p>
+        </div>
+        {% if card.jsonAttachments|length > 0 %}
+        <div class="attachments">
+            <span class="label"><i class="fa fa-paperclip"></i> Attachments ({{ card.jsonAttachments|length }}):</span>
+            {% for attach in card.jsonAttachments %}
+            <div class="attachment">
+                <span class="label"><i class="fa fa-paperclip"></i> <a href="{{ attach.url }}">{{ attach.name }}</a>{% if attach.isUpload%} {{ attach.bytes|number_format }} kb{% endif %}</span>
+                {% if attach.previews|length > 0 %}
+                <p><img src="{{ attach.previews|last.url }}" /></p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.numberOfComments > 0 %}
+        <div class="comments">
+            <span class="label"><i class="fa fa-comments"></i> Comments ({{ card.numberOfComments }}):</span>
+            {% for comment in card.jsonComments %}
+            <div class="comment">
+                <span class="label"><i class="far fa-comments"></i> {{ comment.date }} - {{ comment.memberCreator.fullName }}</span>
+                <span class="text">{{ comment.text }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.jsonCheckLists|length > 0 %}
+        <div class="checklists">
+            <span class="label"><i class="fa fa-list-alt"></i> Checklists ({{ card.jsonCheckLists|length }}):</span>
+            {% for clist in card.jsonCheckLists %}
+            <div class="checklist">
+                <span class="label"><i class="fa fa-list"></i> {{ clist.name }} ({{ clist.items|length }} items)</span>
+                <ul>
+                {% for item in clist.items %}
+                <li>{{ item.name }} <span class="completed">{% if item.completed%}<i class="far fa-check-square"></i> {% if item.completedBy %}{{ item.completedBy }}, {% endif %}{{ item.completedDate }}{% else %}<i class="far fa-square"></i>{% endif %}</span></li>
+                {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.customFields|length > 0 %}
+        <div class="customFields">
+            <span class="label"><i class="fa fa-cubes"></i> CustomFields ({{ card.customFields|length }}):</span>
+            {% for field in card.customFields %}
+            <div class="customField">
+                <span class="label"><i class="fa fa-cube"></i> {{ field.name }}:</span>
+                <span class="text">{{ field.value }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+{% endfor %}
+</body>
+</html>

@@ -1,7 +1,7 @@
 /*
  * TrelloExport
  *
- * A Chrome extension for Trello, that allows to export boards to Excel spreadsheets. And more to come.
+ * A Chrome extension for Trello, that allows to export boards to Excel spreadsheets, HTML, Markdown and OPML.
  *
  * Forked by @trapias (Alberto Velo)
  *  https://github.com/trapias/trelloExport
@@ -159,8 +159,51 @@
 * Whatsnew for v. 1.9.42:
     - new organization name column in Excel exports (issue https://github.com/trapias/TrelloExport/issues/30)
     - custom fields working again following Trello API changes (issue https://github.com/trapias/TrelloExport/issues/31), but not for multiple boards
+* Whatsnew for v. 1.9.43:
+    - new SPONSORED feature: Twig templates for HTML export https://github.com/trapias/TrelloExport/issues/35 and https://github.com/trapias/TrelloExport/issues/36
+    - added card dueComplete field from Trello updated API, used in HTML Twig template
+    - fix filtering options
+    - Twig template selection (local templates)
+    - Default and Bibliography HTML Twig templates (SPONSORED)
+    - fixed issue #39 "Board menu not open" error https://github.com/trapias/TrelloExport/issues/39
+    - save last template used to localStorage, and reload next time
+    - scrollable options dialog
+    - template sets: load custom Twig templates from any https URL
+    - Default, Bibliography and Newsletter HTML Twig templates
 */
-var VERSION = '1.9.42';
+var VERSION = '1.9.43';
+
+// TWIG templates definition
+var availableTwigTemplates = [
+    { name: 'html', url: chrome.extension.getURL('/templates/html.twig'), description: 'Default HTML' },
+    { name: 'bibliography', url: chrome.extension.getURL('/templates/bibliography.twig'), description: 'Bibliography HTML', css: chrome.extension.getURL('/templates/bibliography.css'), },
+    { name: 'newsletter', url: chrome.extension.getURL('/templates/newsletter.twig'), description: 'Newsletter HTML', css: chrome.extension.getURL('/templates/newsletter.css'), }
+];
+var localTwigTemplates = availableTwigTemplates;
+
+function loadTemplateSetFromURL(sUrl) {
+    if (!sUrl)
+        return availableTwigTemplates;
+    // console.log('loadTemplateSetFromURL:' + sUrl);
+    return $.ajax({
+        url: sUrl,
+        async: false,
+        method: 'GET',
+        done: function(sJSonSet) {
+            // console.log('template set loaded: ' + sJSonSet);
+            return sJSonSet;
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error(jqXHR.statusText);
+            $.growl.error({
+                title: "TrelloExport",
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
+                fixed: true
+            });
+            return null;
+        }
+    });
+}
 
 /**
  * http://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
@@ -506,7 +549,7 @@ function TrelloExportOptions() {
         options.push(o);
     }
 
-    var theCSS = 'http://trapias.github.io/assets/TrelloExport/default.css';
+    var theCSS = chrome.extension.getURL('/templates/default.css') || 'https://trapias.github.io/assets/TrelloExport/default.css';
     if (localStorage.TrelloExportCSS)
         theCSS = localStorage.TrelloExportCSS;
 
@@ -522,6 +565,33 @@ function TrelloExportOptions() {
     if (localStorage.TrelloExportType)
         selectedType = localStorage.TrelloExportType;
 
+    var twigTemplate = chrome.extension.getURL('/templates/html.twig');
+    if (localStorage.TrelloExportTwigTemplate)
+        twigTemplate = localStorage.TrelloExportTwigTemplate;
+
+    // load templates from URL, e.g. https://trapias.github.io/assets/TrelloExport/templates.json
+    var templateSetURL = '';
+    if (localStorage.TrelloExportTwigTemplatesURL) {
+        templateSetURL = localStorage.TrelloExportTwigTemplatesURL;
+
+        loadTemplateSetFromURL(templateSetURL).then(function(tplset) {
+            availableTwigTemplates = tplset.templates;
+            // console.log('availableTwigTemplates = ' + availableTwigTemplates);
+            $.growl({
+                title: "TrelloExport",
+                message: "Templates loaded successfully",
+                fixed: false
+            });
+        }, function(err) {
+            console.error('ERROR: ' + err);
+        });
+    }
+
+    var availableTwigTemplatesOptions = [];
+    for (var t = 0; t < availableTwigTemplates.length; t++) {
+        availableTwigTemplatesOptions.push('<option value="' + availableTwigTemplates[t].url + '">' + availableTwigTemplates[t].description + '</option>');
+    }
+
     var sDialog = '<table id="optionslist">' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived items">Archived items ' +
@@ -531,29 +601,32 @@ function TrelloExportOptions() {
         '<td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose columns to be exported to Excel">Export columns</span></td>' +
         '<td><select multiple="multiple" id="selectedColumns">' + options.join('') + '</select></td>' +
         '</tr>' +
-        '<tr id="ckHTMLCardInfoRow" style="display:none"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set options for the target HTML">Options:</span></td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images' +
-        '<br/>Stylesheet: <input id="trelloExportCss" type="text" name="css" value="' + theCSS + '"> ' + '</td></tr>' +
-        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set the List name prefix used to recognize your completed lists. See http://trapias.github.io/blog/trelloexport-1-9-13">Done lists name:</span></td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty" /></td></tr>' +
-        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose what data to export">Type of export:</span></td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
+        '<tr id="ckHTMLCardInfoRow" style="display:none"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set options for the target HTML">Options:</span></td><td><input type="checkbox" checked id="ckHTMLCardInfo" title="Export card info"> Export card info (created, createdby) <br/><input type="checkbox" checked id="chkHTMLInlineImages" title="Show attachment images"> Show attachment images' + '</td></tr>' +
+        '<tr id="renderingOptions" style="display:none"><td><span>Rendering Options:</span></td><td>Stylesheet: <input id="trelloExportCss" type="text" name="css" value="' + theCSS + '"> ' +
+        'Template set:<br><input type="text" id="templateSetURL" placeholder="Insert URL or leave blank" title="Template-set URL - leave blank to use local templates" value="' + templateSetURL + '">Template:<br> <select id="twigTemplate" name="twigTemplate">' +
+        availableTwigTemplatesOptions.join(',') +
+        '</select></td></tr>' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set the List name prefix used to recognize your completed lists. See https://trapias.github.io/blog/trelloexport-1-9-13">Done lists name:</span></td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty"></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Only include items whose name starts with the specified prefix">Filter:</span></td><td>' +
         '<select id="filterMode"><option value="List">On List name</option><option value="Label">On Label name</option><option value="Card">On card name</option></select>' +
-        '<input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr></table>';
+        '<input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr>' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose what data to export">Type of export:</span></td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
+        '</table>';
 
     var dlgReady = new Promise(
         function(resolve, reject) {
 
             // open options dialog to configure & launch export
             $.Zebra_Dialog(sDialog, {
-                title: 'TrelloExport ' + VERSION,
+                title: 'TrelloExport ' + VERSION + ' <span class="blog-link"><a target="_blank" href="http://trapias.github.io/blog/2017/05/12/TrelloExport-1.9.43">Read the Blog post!</a></span>',
                 type: false,
                 'buttons': [{
                     caption: 'Export',
                     callback: function() {
-
-                        nameListDone = $('#setnameListDone').val();
-                        localStorage.TrelloExportListDone = nameListDone;
                         var mode = $('#exportmode').val();
                         localStorage.TrelloExportMode = mode;
+                        nameListDone = $('#setnameListDone').val();
+                        localStorage.TrelloExportListDone = nameListDone;
                         var sfilterListsNames, filters, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages;
                         bexportArchived = $('#exportArchived').is(':checked');
                         bExportComments = $('#comments').is(':checked');
@@ -589,7 +662,7 @@ function TrelloExportOptions() {
                                     // console.log('wait for lists to load');
                                     return false;
                                 } else {
-                                    sfilterListsNames = $('#filterListsNames').val();
+                                    sfilterListsNames = $('.filterListsNames').val();
                                     if (sfilterListsNames.trim() !== '') {
                                         // parse list name filters
                                         filters = sfilterListsNames.split(',');
@@ -616,7 +689,7 @@ function TrelloExportOptions() {
                                 break;
 
                             case 'board':
-                                sfilterListsNames = $('#filterListsNames').val();
+                                sfilterListsNames = $('.filterListsNames').val();
                                 if (sfilterListsNames.trim() !== '') {
                                     // parse list name filters
                                     filters = sfilterListsNames.split(',');
@@ -648,9 +721,14 @@ function TrelloExportOptions() {
                         // filterMode
                         var filterMode = $('#filterMode').val();
 
+                        var templateURL = $('#twigTemplate').val();
+                        localStorage.TrelloExportTwigTemplate = templateURL;
+
+                        localStorage.TrelloExportTwigTemplatesURL = $('#templateSetURL').val();
+
                         // launch export
                         setTimeout(function() {
-                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields);
+                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL);
                         }, 500);
                         return true;
                     }
@@ -675,11 +753,66 @@ function TrelloExportOptions() {
             $('.multiselect-container.dropdown-menu').toggle();
         });
 
+        $('#templateSetURL').on('change', function() {
+            var tplsetURL = $('#templateSetURL').val();
+
+            // console.log('LOADING tplsetURL ' + tplsetURL);
+            if (!tplsetURL) {
+                localStorage.TrelloExportTwigTemplatesURL = tplsetURL;
+                availableTwigTemplates = localTwigTemplates;
+                var availableTwigTemplatesOptions = [];
+                for (var t = 0; t < availableTwigTemplates.length; t++) {
+                    availableTwigTemplatesOptions.push('<option value="' + availableTwigTemplates[t].url + '">' + availableTwigTemplates[t].description + '</option>');
+                }
+                $('#twigTemplate').empty().append(availableTwigTemplatesOptions);
+                $.growl({
+                    title: "TrelloExport",
+                    message: "Templates loaded successfully",
+                    fixed: false
+                });
+                return;
+            }
+
+            loadTemplateSetFromURL(tplsetURL).then(function(tplset) {
+                if (!tplset.templates) {
+                    console.error('UNABLE TO LOAD TEMPLATE SET');
+                    console.log('tplset: ' + tplset);
+                    $.growl.error({
+                        title: "TrelloExport",
+                        message: "Unable to load template set from URL " + tplsetURL,
+                        fixed: true
+                    });
+                    return;
+                }
+
+                localStorage.TrelloExportTwigTemplatesURL = tplsetURL;
+                availableTwigTemplates = tplset.templates;
+
+                var availableTwigTemplatesOptions = [];
+                for (var t = 0; t < availableTwigTemplates.length; t++) {
+                    availableTwigTemplatesOptions.push('<option value="' + availableTwigTemplates[t].url + '">' + availableTwigTemplates[t].description + '</option>');
+                }
+
+                $('#twigTemplate').empty().append(availableTwigTemplatesOptions);
+                // console.log('options updated w ' + JSON.stringify(availableTwigTemplatesOptions));
+                $.growl({
+                    title: "TrelloExport",
+                    message: "Templates loaded successfully",
+                    fixed: false
+                });
+
+            }, function(err) {
+                console.error('ERROR: ' + err);
+            });
+        });
+
         $('#exporttype').on('change', function() {
             var sexporttype = $('#exporttype').val();
             localStorage.TrelloExportType = sexporttype;
             var sSelect;
             resetOptions();
+            var mode = $('#exportmode').val();
+            localStorage.TrelloExportMode = mode;
 
             switch (sexporttype) {
                 case 'list':
@@ -688,7 +821,7 @@ function TrelloExportOptions() {
                     $('#optionslist').append('<tr><td>Select one or more Lists</td><td><select multiple id="choosenlist">' + sSelect + '</select></td></tr>');
                     break;
                 case 'board':
-                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr>');
+                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set prefix or leave empty"></td></tr>');
                     break;
                 case 'boards':
                     // get a list of all boards
@@ -696,7 +829,7 @@ function TrelloExportOptions() {
                     $('#customfields').attr('disabled', true);
                     sSelect = getallboards();
                     $('#optionslist').append('<tr><td>Select one or more Boards</td><td><select multiple id="choosenboards">' + sSelect + '</select></td></tr>');
-                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" id="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr>');
+                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set prefix or leave empty"></td></tr>');
                     break;
                 case 'cards':
                     // get a list of all lists in board and let user choose which to export
@@ -717,6 +850,28 @@ function TrelloExportOptions() {
                     break;
             }
 
+            $('#cklAsRowsRow').hide();
+            $('#ckHTMLCardInfoRow').hide();
+            $('#xlsColumns').hide();
+            $('#renderingOptions').hide();
+            switch (mode) {
+                case 'XLSX':
+                    $('#cklAsRowsRow').show();
+                    $('#xlsColumns').show();
+                    break;
+                case 'HTML':
+                    $('#renderingOptions').show();
+                    $('#xlsColumns').show();
+                    break;
+                case 'MD':
+                    $('#ckHTMLCardInfoRow').show();
+                    // $('#renderingOptions').show();
+                    break;
+                default:
+                    break;
+            }
+
+
         });
 
         if (selectedMode)
@@ -728,6 +883,7 @@ function TrelloExportOptions() {
             $('#cklAsRowsRow').hide();
             $('#ckHTMLCardInfoRow').hide();
             $('#xlsColumns').hide();
+            $('#renderingOptions').hide();
 
             switch (mode) {
                 case 'XLSX':
@@ -735,8 +891,12 @@ function TrelloExportOptions() {
                     $('#xlsColumns').show();
                     break;
                 case 'HTML':
+                    $('#renderingOptions').show();
+                    $('#xlsColumns').show();
+                    break;
                 case 'MD':
                     $('#ckHTMLCardInfoRow').show();
+                    // $('#renderingOptions').show();
                     break;
                 default:
                     break;
@@ -766,6 +926,11 @@ function TrelloExportOptions() {
         if (selectedType) {
             $('#exporttype').val(selectedType);
             $('#exporttype').trigger('change');
+        }
+
+        if (twigTemplate) {
+            $('#twigTemplate').val(twigTemplate);
+            $('#twigTemplate').trigger('change');
         }
 
         // todo: show progress
@@ -1181,9 +1346,9 @@ function extractFloat(str, regex, groupIndex) {
 }
 
 
-function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields) {
-    console.log('TrelloExport loading data for export format: ' + exportFormat + '...');
-
+function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL) {
+    console.log('TrelloExport loading data, export format: ' + exportFormat + '...');
+    var converter = new showdown.Converter();
     var promLoadData = new Promise(
         function(resolve, reject) {
             $.growl({
@@ -1225,9 +1390,13 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
             var boardData = getBoardData(idBoard);
             var boardName = boardData.name;
             var orgName = '';
-            var oOData = oOrganizations.find(function(obj) { return obj.id === boardData.idOrganization; });
-            if (oOData)
-                orgName = oOData.displayName;
+            if (oOrganizations) {
+                var oOData = oOrganizations.find(function(obj) { return obj.id === boardData.idOrganization; });
+                if (oOData)
+                    orgName = oOData.displayName;
+            } else {
+                orgName = 'Personal Boards';
+            }
 
             var readCards = 0;
 
@@ -1486,6 +1655,9 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 if (item) {
                                                                     var cItem = {};
                                                                     cItem.name = item.name;
+                                                                    if (exportFormat !== 'MD') {
+                                                                        cItem.name = html_encode(cItem.name);
+                                                                    }
                                                                     if (item.state == 'complete') {
                                                                         // issue #5
                                                                         // find who and when item was completed
@@ -1524,8 +1696,11 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 var jsonComment = {};
                                                                 //2013-08-08T06:57:18
                                                                 var d = new Date(action.date);
-                                                                jsonComment.date = d;
+                                                                jsonComment.date = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 jsonComment.text = action.data.text;
+                                                                if (exportFormat !== 'MD') {
+                                                                    jsonComment.text = converter.makeHtml(html_encode(jsonComment.text));
+                                                                }
                                                                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 if (action.memberCreator !== undefined) {
                                                                     jsonComment.memberCreator = action.memberCreator;
@@ -1548,7 +1723,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 if (card.attachments) {
                                                     // console.log('Attachments: ' + card.attachments.length);
                                                     $.each(card.attachments, function(j, attach) {
-                                                        // console.log(attach);
+                                                        // console.log("attach: " + JSON.stringify(attach));
                                                         jsonAttachments.push(attach);
                                                         attachmentsText += '[' + attach.name + '] (' + attach.bytes + ') ' + attach.url + '\n';
                                                     });
@@ -1652,6 +1827,10 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                             var dateLastActivity = new Date(card.dateLastActivity);
 
+                                            if (exportFormat !== 'MD') {
+                                                card.desc = converter.makeHtml(html_encode(card.desc));
+                                            }
+
                                             var rowData = {
                                                 'organizationName': orgName,
                                                 'boardName': boardName,
@@ -1672,17 +1851,19 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'datetimeCreated': datetimeCreated,
                                                 'memberCreator': memberCreator,
                                                 'LastActivity': dateLastActivity.toLocaleDateString() + ' ' + dateLastActivity.toLocaleTimeString(),
-                                                'due': due,
+                                                'due': (card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
                                                 'datetimeDone': datetimeDone,
                                                 'memberDone': memberDone,
                                                 'completionTime': completionTime,
                                                 'completionTimeText': completionTimeText,
                                                 'memberInitials': memberInitials.toString(),
-                                                'labels': labels, //.toString(),
+                                                'labels': labels,
                                                 'isArchived': isArchived,
                                                 'jsonCheckLists': jsonCheckLists,
                                                 'jsonComments': jsonComments,
-                                                'jsonAttachments': jsonAttachments
+                                                'jsonAttachments': jsonAttachments,
+                                                'dueComplete': card.dueComplete,
+                                                'customFields': []
                                             };
 
                                             if (bExportCustomFields) {
@@ -1690,6 +1871,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 var cfVals = loadCardCustomFields(card.id);
 
                                                 cfVals.forEach(function(dv) {
+                                                    rowData.customFields.push({ name: html_encode(dv.colName), value: html_encode(dv.value) });
                                                     // console.log('LOADED CF ' + dv.colName + ' = ' + dv.value);
                                                     rowData[dv.colName] = dv.value;
                                                 });
@@ -1702,7 +1884,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                 })
                                 .fail(function(jqXHR, textStatus, errorThrown) {
-                                    console.log("Error!!!");
+                                    console.error("Error: " + jqXHR.statusText);
                                     readCards = -1;
                                     $.growl.error({
                                         title: "TrelloExport",
@@ -1718,7 +1900,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                 })
                 .fail(function(jqXHR, textStatus, errorThrown) {
-                    console.log("Error!!!");
+                    console.error("Error: " + jqXHR.statusText);
                     $.growl.error({
                         title: "TrelloExport",
                         message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
@@ -1750,7 +1932,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                 break;
 
             case 'HTML':
-                createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css);
+                createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css, templateURL);
                 break;
 
             case 'OPML':
@@ -2679,8 +2861,8 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
     $.growl.notice({
         title: "TrelloExport",
-        message: 'Done. Downloading xlsx file...',
-        fixed: true
+        message: 'Done. Downloading xlsx file ' + fileName,
+        fixed: false
     });
 }
 
@@ -2794,8 +2976,8 @@ function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo, bchkHT
 
     $.growl.notice({
         title: "TrelloExport",
-        message: 'Done. Downloading markdown file...',
-        fixed: true
+        message: 'Done. Downloading markdown file ' + fileName,
+        fixed: false
     });
 }
 
@@ -2804,34 +2986,80 @@ function isImage(name) {
     return (name.endsWith("jpg") || name.endsWith("jpeg") || name.endsWith("png"));
 }
 
-function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css) {
-    var md = createMarkdownExport(jsonComputedCards, false, bckHTMLCardInfo, bchkHTMLInlineImages);
-    var converter = new showdown.Converter();
-    html = converter.makeHtml(html_encode(md));
+function loadTemplate(url) {
+
+    return $.ajax({
+        url: url,
+        async: false,
+        method: 'GET',
+        done: function(sTwig) {
+            console.log('template loaded: ' + sTwig);
+            return sTwig;
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error(jqXHR.statusText);
+            $.growl.error({
+                title: "TrelloExport",
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
+                fixed: true
+            });
+            return null;
+        }
+    });
+
+}
+
+function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css, templateURL) {
+
+    if (!templateURL) {
+        templateURL = chrome.extension.getURL('/templates/html.twig');
+        console.log('using default templateURL: ' + templateURL);
+    } else {
+        // get css from availableTwigTemplates
+        for (var t = 0; t < availableTwigTemplates.length; t++) {
+            if (availableTwigTemplates[t].url === templateURL)
+                if (availableTwigTemplates[t].css)
+                    css = availableTwigTemplates[t].css;
+        }
+    }
 
     if (css === undefined || css === '' || css === null) {
-        css = 'http://trapias.github.io/assets/TrelloExport/default.css';
+        css = chrome.extension.getURL('/templates/default.css'); // 'https://trapias.github.io/assets/TrelloExport/default.css';
     }
-    var htmlBody = '<!DOCTYPE html>\r\n<html><head><link type="text/css" rel="stylesheet" href="' + css + '"></head><body class="TrelloExport">\r\n' + html + '\r\n</body></html>';
+    console.log('createHTMLExport css: ' + css);
 
-    var now = new Date();
-    var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".html";
+    var renderDATA = {
+        renderSettings: { 'CSS': css, 'language': (window.navigator.userLanguage || window.navigator.language) },
+        cards: jsonComputedCards
+    };
+    // console.log('renderDATA:' + JSON.stringify(renderDATA));
 
-    saveAs(new Blob([s2ab(htmlBody)], {
-        type: "text/html;charset=utf-8"
-    }), fileName);
+    loadTemplate(templateURL).then(function(sTpl) {
+        var template = Twig.twig({
+            data: sTpl
+        });
+        var htmlBody = template.render({ data: renderDATA });
+        // console.log('RENDERED: ' + htmlBody);
+        var now = new Date();
+        var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".html";
 
-    // window.open(URL.createObjectURL(new Blob([s2ab(html)], {
-    //     type: "text/html;charset=utf-8"
-    // })));
+        saveAs(new Blob([s2ab(htmlBody)], {
+            type: "text/html;charset=utf-8"
+        }), fileName);
 
-    console.log('Done exporting ' + fileName);
+        console.log('Done exporting ' + fileName);
 
-    $.growl.notice({
-        title: "TrelloExport",
-        message: 'Done. Downloading HTML file...',
-        fixed: true
+        $.growl.notice({
+            title: "TrelloExport",
+            message: 'Done. Downloading HTML file ' + fileName,
+            fixed: false
+        });
+
+    }, function(err) {
+        console.error(err);
     });
+
+
 }
 
 function createOPMLExport(jsonComputedCards) {
@@ -2929,15 +3157,11 @@ function createOPMLExport(jsonComputedCards) {
         type: "text/xml;charset=utf-8"
     }), fileName);
 
-    // window.open(URL.createObjectURL(new Blob([s2ab(html)], {
-    //     type: "text/html;charset=utf-8"
-    // })));
-
     console.log('Done exporting ' + fileName);
 
     $.growl.notice({
         title: "TrelloExport",
-        message: 'Done. Downloading OPML file...',
-        fixed: true
+        message: 'Done. Downloading OPML file ' + fileName,
+        fixed: false
     });
 }

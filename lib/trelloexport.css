@@ -34,3 +34,9 @@
     overflow-y: scroll;
     display: none;
 }
+
+.blog-link {
+    text-align: right;
+    width: 70%;
+    display: inline-block;
+}

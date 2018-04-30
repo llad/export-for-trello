@@ -6,13 +6,23 @@ You can now find it on [Chrome Web Store](https://chrome.google.com/webstore/det
 
 ## Support
 
-Please open issues on [Github](https://github.com/trapias/trelloExport/issues) or onto the dedicated [Trello board](https://trello.com/b/MBnwUMwM/trelloexport).
+Please open issues at [Github](https://github.com/trapias/trelloExport/issues) or ask for help in the dedicated [Trello board](https://trello.com/b/MBnwUMwM/trelloexport).
 
 ## Release history
 
+### Version 1.9.45
+
+- Added a button to clear all settings saved to localStorage
+- new jsonLabels array for labels in data
+- updated HTML default template with labels
+
+### Version 1.9.44
+
+Dummy release needed to update Chrome Web Store, wrong blog article link!
+
 ### Version 1.9.43
 
-New SPONSORED feature: Twig templates for HTML export. See the [BLOG POST](http://trapias.github.io/blog/2017/05/12/TrelloExport-1.9.43) for more info!
+New SPONSORED feature: Twig templates for HTML export. See the [BLOG POST](http://trapias.github.io/blog/2018/04/27/TrelloExport-1.9.43) for more info!
 
 ### Version 1.9.42
 

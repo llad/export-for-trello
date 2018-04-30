@@ -1,0 +1,22 @@
+{
+  "name": "twigjs-bower",
+  "description": "A version of Twig JS for use with Bower",
+  "main": "twig/twig.min.js",
+  "authors": [
+    "Phil Baker <phil.baker@asylumdigital.net>"
+  ],
+  "license": "BSD-2-Clause",
+  "keywords": [
+    "twig",
+    "js",
+    "bower"
+  ],
+  "homepage": "https://github.com/philsbury/twigjs-bower",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

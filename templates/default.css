@@ -130,7 +130,8 @@ a:focus {
 .card .checklists,
 .card .checklist,
 .card .customFields,
-.card .customField {
+.card .customField,
+.card .labels {
     padding: 2px;
     width: auto;
     max-width: 100%;

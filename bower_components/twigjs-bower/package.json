@@ -1,0 +1,26 @@
+{
+  "name": "twigjs-bower",
+  "version": "1.10.5",
+  "description": "A version of Twig JS for use with Bower",
+  "main": "twig.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philsbury/twigjs-bower.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/philsbury/twigjs-bower/issues"
+  },
+  "homepage": "https://github.com/philsbury/twigjs-bower#readme",
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-contrib-clean": "^1.0.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-exec": "^1.0.1",
+    "load-grunt-tasks": "^3.5.2"
+  }
+}

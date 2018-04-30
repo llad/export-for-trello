@@ -56,6 +56,14 @@
             <span class="label">Description:</span>
             <p class="text">{{ card.cardDescription }}</p>
         </div>
+        {% if card.jsonLabels|length > 0 %}
+        <div class="labels">
+            <span class="label"><i class="fas fa-tags"></i> Labels ({{ card.jsonLabels|length }}):</span>
+            {% for label in card.jsonLabels %}
+                <span class="label"><i class="fas fa-tag"></i> <span>{{ label.name }}</span></span>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% if card.jsonAttachments|length > 0 %}
         <div class="attachments">
             <span class="label"><i class="fa fa-paperclip"></i> Attachments ({{ card.jsonAttachments|length }}):</span>

@@ -1,0 +1,33 @@
+{
+  "name": "twigjs-bower",
+  "description": "A version of Twig JS for use with Bower",
+  "main": "twig/twig.min.js",
+  "authors": [
+    "Phil Baker <phil.baker@asylumdigital.net>"
+  ],
+  "license": "BSD-2-Clause",
+  "keywords": [
+    "twig",
+    "js",
+    "bower"
+  ],
+  "homepage": "https://github.com/philsbury/twigjs-bower",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "version": "0.10.5",
+  "_release": "0.10.5",
+  "_resolution": {
+    "type": "version",
+    "tag": "0.10.5",
+    "commit": "7e7dc0c59ff5b32a35f285f9a36532cbee92e0fc"
+  },
+  "_source": "https://github.com/philsbury/twigjs-bower.git",
+  "_target": "^0.10.5",
+  "_originalSource": "twigjs-bower",
+  "_direct": true
+}

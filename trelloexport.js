@@ -170,8 +170,13 @@
     - scrollable options dialog
     - template sets: load custom Twig templates from any https URL
     - Default, Bibliography and Newsletter HTML Twig templates
+* Whatsnew for v. 1.9.44:
+    - Dummy release needed to update Chrome Web Store, wrong blog article link!
+* Whatsnew for v. 1.9.45:
+    - button to clear all settings saved to localStorage
+    - new jsonLabels array for labels
 */
-var VERSION = '1.9.43';
+var VERSION = '1.9.45';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -202,6 +207,20 @@ function loadTemplateSetFromURL(sUrl) {
             });
             return null;
         }
+    });
+}
+
+function CleanLocalStorage() {
+    localStorage.TrelloExportCSS = '';
+    localStorage.TrelloExportMode = '';
+    localStorage.TrelloExportListDone = '';
+    localStorage.TrelloExportType = '';
+    localStorage.TrelloExportTwigTemplate = '';
+    localStorage.TrelloExportTwigTemplatesURL = '';
+    $.growl({
+        title: "TrelloExport",
+        message: "LocalStorage settings cleaned successfully. Please close and re-open TrelloExport.",
+        fixed: false
     });
 }
 
@@ -618,7 +637,7 @@ function TrelloExportOptions() {
 
             // open options dialog to configure & launch export
             $.Zebra_Dialog(sDialog, {
-                title: 'TrelloExport ' + VERSION + ' <span class="blog-link"><a target="_blank" href="http://trapias.github.io/blog/2018/04/27/TrelloExport-1.9.43">Read the Blog post!</a></span>',
+                title: 'TrelloExport ' + VERSION + ' <span class="blog-link"><a target="_blank" href="http://trapias.github.io/blog/2018/04/27/TrelloExport-1.9.43">Read the Blog!</a></span>',
                 type: false,
                 'buttons': [{
                     caption: 'Export',
@@ -849,6 +868,12 @@ function TrelloExportOptions() {
                 default:
                     break;
             }
+
+            $('#optionslist').append('<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Advanced functions">Advanced:</span></td><td><button id="btnCleanLocalStorage">Clean LocalStorage</button></td></tr>');
+
+            $('#btnCleanLocalStorage').on('click', function() {
+                CleanLocalStorage();
+            });
 
             $('#cklAsRowsRow').hide();
             $('#ckHTMLCardInfoRow').hide();
@@ -1583,7 +1608,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             });
 
                                             //Get all labels
-                                            var labels = [];
+                                            var labels = [],
+                                                jsonLabels = [];
                                             if (card.labels.length <= 0 && filterListsNames.length > 0 && filterMode === 'Label') {
                                                 // filtering by label name: skip cards without labels
                                                 accept = false;
@@ -1594,7 +1620,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 accept = false;
 
                                             $.each(card.labels, function(i, label) {
-
+                                                jsonLabels.push(label);
                                                 if (label.name) {
                                                     labels.push(label.name);
                                                 } else {
@@ -1863,9 +1889,9 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'jsonComments': jsonComments,
                                                 'jsonAttachments': jsonAttachments,
                                                 'dueComplete': card.dueComplete,
-                                                'customFields': []
+                                                'customFields': [],
+                                                'jsonLabels': jsonLabels
                                             };
-
                                             if (bExportCustomFields) {
                                                 // load custom fields values for card
                                                 var cfVals = loadCardCustomFields(card.id);

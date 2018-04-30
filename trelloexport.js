@@ -175,8 +175,10 @@
 * Whatsnew for v. 1.9.45:
     - button to clear all settings saved to localStorage
     - new jsonLabels array for labels
+* Whatsnew for v. 1.9.46:
+    - fix new "clear localStorage" button position
 */
-var VERSION = '1.9.45';
+var VERSION = '1.9.46';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -826,6 +828,7 @@ function TrelloExportOptions() {
         });
 
         $('#exporttype').on('change', function() {
+            $('#advancedOptions').remove();
             var sexporttype = $('#exporttype').val();
             localStorage.TrelloExportType = sexporttype;
             var sSelect;
@@ -869,7 +872,7 @@ function TrelloExportOptions() {
                     break;
             }
 
-            $('#optionslist').append('<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Advanced functions">Advanced:</span></td><td><button id="btnCleanLocalStorage">Clean LocalStorage</button></td></tr>');
+            $('#optionslist').append('<tr id="advancedOptions"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Advanced functions">Advanced:</span></td><td><button id="btnCleanLocalStorage">Clean LocalStorage</button></td></tr>');
 
             $('#btnCleanLocalStorage').on('click', function() {
                 CleanLocalStorage();

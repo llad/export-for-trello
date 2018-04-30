@@ -10,6 +10,10 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.46
+
+- fix new "clear localStorage" button position
+
 ### Version 1.9.45
 
 - Added a button to clear all settings saved to localStorage

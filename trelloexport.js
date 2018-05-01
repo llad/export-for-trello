@@ -177,8 +177,11 @@
     - new jsonLabels array for labels
 * Whatsnew for v. 1.9.46:
     - fix new "clear localStorage" button position
+* Whatsnew for v. 1.9.47:
+    - responsive images in Bibliography template
+    - fix double encoding of card description
 */
-var VERSION = '1.9.46';
+var VERSION = '1.9.47';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -1856,9 +1859,9 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                             var dateLastActivity = new Date(card.dateLastActivity);
 
-                                            if (exportFormat !== 'MD') {
-                                                card.desc = converter.makeHtml(html_encode(card.desc));
-                                            }
+                                            // if (exportFormat !== 'MD') {
+                                            //     card.desc = converter.makeHtml(html_encode(card.desc));
+                                            // }
 
                                             var rowData = {
                                                 'organizationName': orgName,
@@ -1867,7 +1870,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'cardID': card.idShort,
                                                 'title': title,
                                                 'shortLink': 'https://trello.com/c/' + card.shortLink,
-                                                'cardDescription': card.desc.substr(0, MAXCHARSPERCELL),
+                                                'cardDescription': (exportFormat === 'XLSX' ? card.desc.substr(0, MAXCHARSPERCELL) : card.desc),
                                                 'checkLists': checkListsText.substr(0, MAXCHARSPERCELL),
                                                 'numberOfComments': numberOfComments,
                                                 'comments': commentsText.substr(0, MAXCHARSPERCELL),

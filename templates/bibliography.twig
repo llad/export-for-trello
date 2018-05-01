@@ -49,7 +49,7 @@
                     <div class="attachment">
                         <span class="label"><i class="fa fa-paperclip"></i> <a target="_blank" href="{{ attach.url }}">{{ attach.name }}</a>{% if attach.isUpload%} {{ attach.bytes|number_format }} kb{% endif %}</span>
                         {% if attach.previews|length > 0 %}
-                        <p><img src="{{ attach.previews|last.url }}" /></p>
+                        <p><img class="img-fluid" src="{{ attach.previews|last.url }}" /></p>
                         {% endif %}
                     </div>
                     {% endfor %}

@@ -10,6 +10,11 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.47
+
+- responsive images in Bibliography template
+- fix double encoding of card description
+
 ### Version 1.9.46
 
 - fix new "clear localStorage" button position

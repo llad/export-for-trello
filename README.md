@@ -10,6 +10,12 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.48
+
+- bugfix HTML encoding for multiple properties
+- small fixes in templates
+- two slightly different Newsletter templates
+
 ### Version 1.9.47
 
 - responsive images in Bibliography template

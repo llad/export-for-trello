@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html language="{{ data.renderSettings.language }} ">
+<html language="{{ data.renderSettings.language }}">
 <head>
 <title>TrelloExport Bibliography</title>
 <meta charset="utf-8">
@@ -10,8 +10,6 @@
 </head>
 <body>
 <div class="container">
-    <div class="row">
-        <div class="col">
         {% set organizationName = '' %}
         {% set boardName = '' %}
         {% set prevList = '' %}
@@ -28,74 +26,76 @@
             {% endif %}
             {% set prevList = card.listName %}
             {# find attachment which is an URL and set to variable 'theLink' #}
-        {% if card.jsonAttachments|length > 0 %}
-            {% for attach in card.jsonAttachments %}
-                {% if not attach.isUpload %}
-                {% if theLink is empty %}
-                {% set theLink = attach.url %}
-                {% endif %}
-                {% endif %}
-            {% endfor %}        
-        {% endif %}
-            <div class="card">
-                <h3><a target="_blank" href="{{ theLink }}">{{ card.title }}</a></h3>        
-                <div class="description">
-                    <p class="text">{{ card.cardDescription }}</p>
-                </div>
-                {% if card.jsonAttachments|length > 0 %}
-                <div class="attachments">
-                    <span class="label"><i class="fa fa-paperclip"></i> Attachments ({{ card.jsonAttachments|length }}):</span>
-                    {% for attach in card.jsonAttachments %}
-                    <div class="attachment">
-                        <span class="label"><i class="fa fa-paperclip"></i> <a target="_blank" href="{{ attach.url }}">{{ attach.name }}</a>{% if attach.isUpload%} {{ attach.bytes|number_format }} kb{% endif %}</span>
-                        {% if attach.previews|length > 0 %}
-                        <p><img class="img-fluid" src="{{ attach.previews|last.url }}" /></p>
+            {% if card.jsonAttachments|length > 0 %}
+                {% for attach in card.jsonAttachments %}
+                    {% if not attach.isUpload %}
+                    {% if theLink is empty %}
+                    {% set theLink = attach.url %}
+                    {% endif %}
+                    {% endif %}
+                {% endfor %}        
+            {% endif %}
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <h3><a target="_blank" href="{{ theLink }}">{{ card.title }}</a></h3>        
+                        <div class="description">
+                            <p class="text">{{ card.cardDescription }}</p>
+                        </div>
+                        {% if card.jsonAttachments|length > 0 %}
+                        <div class="attachments">
+                            <span class="label"><i class="fa fa-paperclip"></i> Attachments ({{ card.jsonAttachments|length }}):</span>
+                            {% for attach in card.jsonAttachments %}
+                            <div class="attachment">
+                                <span class="label"><i class="fa fa-paperclip"></i> <a target="_blank" href="{{ attach.url }}">{{ attach.name }}</a>{% if attach.isUpload%} {{ attach.bytes|number_format }} kb{% endif %}</span>
+                                {% if attach.previews|length > 0 %}
+                                <p><img class="img-fluid" src="{{ attach.previews|last.url }}" /></p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if card.numberOfComments > 0 %}
+                        <div class="comments">
+                            <span class="label"><i class="fa fa-comments"></i> Comments ({{ card.numberOfComments }}):</span>
+                            {% for comment in card.jsonComments %}
+                            <div class="comment">
+                                <span class="label"><i class="far fa-comments"></i> {{ comment.date }} - {{ comment.memberCreator.fullName }}</span>
+                                <span class="text">{{ comment.text }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if card.jsonCheckLists|length > 0 %}
+                        <div class="checklists">
+                            <span class="label"><i class="fa fa-list-alt"></i> Checklists ({{ card.jsonCheckLists|length }}):</span>
+                            {% for clist in card.jsonCheckLists %}
+                            <div class="checklist">
+                                <span class="label"><i class="fa fa-list"></i> {{ clist.name }} ({{ clist.items|length }} items)</span>
+                                <ul>
+                                {% for item in clist.items %}
+                                <li>{{ item.name }} <span class="completed">{% if item.completed%}<i class="far fa-check-square"></i> {% if item.completedBy %}{{ item.completedBy }}, {% endif %}{{ item.completedDate }}{% else %}<i class="far fa-square"></i>{% endif %}</span></li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if card.customFields|length > 0 %}
+                        <div class="customFields">
+                            <span class="label"><i class="fa fa-cubes"></i> CustomFields ({{ card.customFields|length }}):</span>
+                            {% for field in card.customFields %}
+                            <div class="customField">
+                                <span class="label"><i class="fa fa-cube"></i> {{ field.name }}:</span>
+                                <span class="text">{{ field.value }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
                         {% endif %}
                     </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% if card.numberOfComments > 0 %}
-                <div class="comments">
-                    <span class="label"><i class="fa fa-comments"></i> Comments ({{ card.numberOfComments }}):</span>
-                    {% for comment in card.jsonComments %}
-                    <div class="comment">
-                        <span class="label"><i class="far fa-comments"></i> {{ comment.date }} - {{ comment.memberCreator.fullName }}</span>
-                        <span class="text">{{ comment.text }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% if card.jsonCheckLists|length > 0 %}
-                <div class="checklists">
-                    <span class="label"><i class="fa fa-list-alt"></i> Checklists ({{ card.jsonCheckLists|length }}):</span>
-                    {% for clist in card.jsonCheckLists %}
-                    <div class="checklist">
-                        <span class="label"><i class="fa fa-list"></i> {{ clist.name }} ({{ clist.items|length }} items)</span>
-                        <ul>
-                        {% for item in clist.items %}
-                        <li>{{ item.name }} <span class="completed">{% if item.completed%}<i class="far fa-check-square"></i> {% if item.completedBy %}{{ item.completedBy }}, {% endif %}{{ item.completedDate }}{% else %}<i class="far fa-square"></i>{% endif %}</span></li>
-                        {% endfor %}
-                        </ul>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% if card.customFields|length > 0 %}
-                <div class="customFields">
-                    <span class="label"><i class="fa fa-cubes"></i> CustomFields ({{ card.customFields|length }}):</span>
-                    {% for field in card.customFields %}
-                    <div class="customField">
-                        <span class="label"><i class="fa fa-cube"></i> {{ field.name }}:</span>
-                        <span class="text">{{ field.value }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-        {% endfor %}
+             </div>
         </div>
-    </div>
+        {% endfor %}
 </div>
 </body>
 </html>

@@ -180,14 +180,19 @@
 * Whatsnew for v. 1.9.47:
     - responsive images in Bibliography template
     - fix double encoding of card description
+* Whatsnew for v. 1.9.48:
+    - bugfix HTML encoding for multiple properties
+    - small fixes in templates
+    - two Newsletter templates
 */
-var VERSION = '1.9.47';
+var VERSION = '1.9.48';
 
 // TWIG templates definition
 var availableTwigTemplates = [
     { name: 'html', url: chrome.extension.getURL('/templates/html.twig'), description: 'Default HTML' },
     { name: 'bibliography', url: chrome.extension.getURL('/templates/bibliography.twig'), description: 'Bibliography HTML', css: chrome.extension.getURL('/templates/bibliography.css'), },
-    { name: 'newsletter', url: chrome.extension.getURL('/templates/newsletter.twig'), description: 'Newsletter HTML', css: chrome.extension.getURL('/templates/newsletter.css'), }
+    { name: 'newsletter', url: chrome.extension.getURL('/templates/newsletter.twig'), description: 'Newsletter with buttons HTML', css: chrome.extension.getURL('/templates/newsletter.css'), },
+    { name: 'newsletter2', url: chrome.extension.getURL('/templates/newsletter2.twig'), description: 'Newsletter with links HTML', css: chrome.extension.getURL('/templates/newsletter.css'), }
 ];
 var localTwigTemplates = availableTwigTemplates;
 
@@ -256,7 +261,8 @@ if (!String.prototype.codePointAt) {
 function html_encode(string) {
     var ret_val = '';
     for (var i = 0; i < string.length; i++) {
-        if (string.codePointAt(i) > 127) {
+        var iC = string.codePointAt(i);
+        if ((iC < 65 || iC > 127) && (iC !== 40 && iC !== 41)) {
             ret_val += '&#' + string.codePointAt(i) + ';';
         } else {
             ret_val += string.charAt(i);
@@ -1673,7 +1679,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                         var list_id = list.id;
                                                         if (list_id == checklistid) {
                                                             var jsonCheckList = {};
-                                                            jsonCheckList.name = list.name;
+                                                            jsonCheckList.name = html_encode(list.name);
                                                             jsonCheckList.items = [];
                                                             checkListsText += list.name + ' (' + list.checkItems.length + ' items):\n';
                                                             //checkitems: reordered (issue #4 https://github.com/trapias/trelloExport/issues/4)
@@ -1736,9 +1742,12 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 if (action.memberCreator !== undefined) {
                                                                     jsonComment.memberCreator = action.memberCreator;
-                                                                    if (jsonComment.memberCreator.fullName === undefined) {
-                                                                        jsonComment.memberCreator.fullName = jsonComment.memberCreator.username;
+                                                                    if (jsonComment.memberCreator.fullName !== undefined) {
+                                                                        jsonComment.memberCreator.fullName = html_encode(jsonComment.memberCreator.fullName);
+                                                                    } else {
+                                                                        jsonComment.memberCreator.fullName = html_encode(jsonComment.memberCreator.username);
                                                                     }
+
                                                                     commentsText += '[' + sActionDate + ' - ' + (action.memberCreator.fullName !== undefined ? action.memberCreator.fullName : action.memberCreator.username) + '] ' + action.data.text + "\n";
                                                                 } else {
                                                                     jsonComment.memberCreator = null;
@@ -1756,6 +1765,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                     // console.log('Attachments: ' + card.attachments.length);
                                                     $.each(card.attachments, function(j, attach) {
                                                         // console.log("attach: " + JSON.stringify(attach));
+                                                        attach.name = html_encode(attach.name);
                                                         jsonAttachments.push(attach);
                                                         attachmentsText += '[' + attach.name + '] (' + attach.bytes + ') ' + attach.url + '\n';
                                                     });
@@ -1859,16 +1869,16 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                             var dateLastActivity = new Date(card.dateLastActivity);
 
-                                            // if (exportFormat !== 'MD') {
-                                            //     card.desc = converter.makeHtml(html_encode(card.desc));
-                                            // }
+                                            if (exportFormat !== 'MD') {
+                                                card.desc = converter.makeHtml(html_encode(card.desc));
+                                            }
 
                                             var rowData = {
                                                 'organizationName': orgName,
-                                                'boardName': boardName,
-                                                'listName': listName,
+                                                'boardName': html_encode(boardName),
+                                                'listName': html_encode(listName),
                                                 'cardID': card.idShort,
-                                                'title': title,
+                                                'title': html_encode(title),
                                                 'shortLink': 'https://trello.com/c/' + card.shortLink,
                                                 'cardDescription': (exportFormat === 'XLSX' ? card.desc.substr(0, MAXCHARSPERCELL) : card.desc),
                                                 'checkLists': checkListsText.substr(0, MAXCHARSPERCELL),
@@ -3058,7 +3068,7 @@ function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImag
     if (css === undefined || css === '' || css === null) {
         css = chrome.extension.getURL('/templates/default.css'); // 'https://trapias.github.io/assets/TrelloExport/default.css';
     }
-    console.log('createHTMLExport css: ' + css);
+    console.log('createHTMLExport css: ' + css + ', templateURL: ' + templateURL);
 
     var renderDATA = {
         renderSettings: { 'CSS': css, 'language': (window.navigator.userLanguage || window.navigator.language) },

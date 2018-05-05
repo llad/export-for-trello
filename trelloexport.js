@@ -184,8 +184,10 @@
     - bugfix HTML encoding for multiple properties
     - small fixes in templates
     - two Newsletter templates
+* Whatsnew for v. 1.9.49:
+    - bugfix encoding (again), https://github.com/trapias/TrelloExport/issues/43
 */
-var VERSION = '1.9.48';
+var VERSION = '1.9.49';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -262,10 +264,26 @@ function html_encode(string) {
     var ret_val = '';
     for (var i = 0; i < string.length; i++) {
         var iC = string.codePointAt(i);
-        if ((iC < 65 || iC > 127) && (iC !== 40 && iC !== 41)) {
+        if (iC > 127) {
             ret_val += '&#' + string.codePointAt(i) + ';';
         } else {
-            ret_val += string.charAt(i);
+            switch (iC) {
+                case 34:
+                    ret_val += "&quot;";
+                    break;
+                case 38:
+                    ret_val += "&amp;";
+                    break;
+                case 60:
+                    ret_val += "&lt;";
+                    break;
+                case 62:
+                    ret_val += "&gt;";
+                    break;
+                default:
+                    ret_val += string.charAt(i);
+                    break;
+            }
         }
     }
     return ret_val;
@@ -1679,7 +1697,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                         var list_id = list.id;
                                                         if (list_id == checklistid) {
                                                             var jsonCheckList = {};
-                                                            jsonCheckList.name = html_encode(list.name);
+                                                            jsonCheckList.name = (exportFormat === 'HTML' ? html_encode(list.name) : list.name);
                                                             jsonCheckList.items = [];
                                                             checkListsText += list.name + ' (' + list.checkItems.length + ' items):\n';
                                                             //checkitems: reordered (issue #4 https://github.com/trapias/trelloExport/issues/4)
@@ -1693,7 +1711,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 if (item) {
                                                                     var cItem = {};
                                                                     cItem.name = item.name;
-                                                                    if (exportFormat !== 'MD') {
+                                                                    if (exportFormat === 'HTML') {
                                                                         cItem.name = html_encode(cItem.name);
                                                                     }
                                                                     if (item.state == 'complete') {
@@ -1736,16 +1754,16 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 var d = new Date(action.date);
                                                                 jsonComment.date = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 jsonComment.text = action.data.text;
-                                                                if (exportFormat !== 'MD') {
+                                                                if (exportFormat === 'HTML') {
                                                                     jsonComment.text = converter.makeHtml(html_encode(jsonComment.text));
                                                                 }
                                                                 var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 if (action.memberCreator !== undefined) {
                                                                     jsonComment.memberCreator = action.memberCreator;
                                                                     if (jsonComment.memberCreator.fullName !== undefined) {
-                                                                        jsonComment.memberCreator.fullName = html_encode(jsonComment.memberCreator.fullName);
+                                                                        jsonComment.memberCreator.fullName = (exportFormat === 'HTML' ? html_encode(jsonComment.memberCreator.fullName) : jsonComment.memberCreator.fullName);
                                                                     } else {
-                                                                        jsonComment.memberCreator.fullName = html_encode(jsonComment.memberCreator.username);
+                                                                        jsonComment.memberCreator.fullName = (exportFormat === 'HTML' ? html_encode(jsonComment.memberCreator.username) : jsonComment.memberCreator.username);
                                                                     }
 
                                                                     commentsText += '[' + sActionDate + ' - ' + (action.memberCreator.fullName !== undefined ? action.memberCreator.fullName : action.memberCreator.username) + '] ' + action.data.text + "\n";
@@ -1765,7 +1783,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                     // console.log('Attachments: ' + card.attachments.length);
                                                     $.each(card.attachments, function(j, attach) {
                                                         // console.log("attach: " + JSON.stringify(attach));
-                                                        attach.name = html_encode(attach.name);
+                                                        attach.name = (exportFormat === 'HTML' ? html_encode(attach.name) : attach.name);
                                                         jsonAttachments.push(attach);
                                                         attachmentsText += '[' + attach.name + '] (' + attach.bytes + ') ' + attach.url + '\n';
                                                     });
@@ -1869,22 +1887,22 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                             var dateLastActivity = new Date(card.dateLastActivity);
 
-                                            if (exportFormat !== 'MD') {
+                                            if (exportFormat === 'HTML') {
                                                 card.desc = converter.makeHtml(html_encode(card.desc));
                                             }
 
                                             var rowData = {
                                                 'organizationName': orgName,
-                                                'boardName': html_encode(boardName),
-                                                'listName': html_encode(listName),
+                                                'boardName': (exportFormat === 'HTML' ? html_encode(boardName) : boardName),
+                                                'listName': (exportFormat === 'HTML' ? html_encode(listName) : listName),
                                                 'cardID': card.idShort,
-                                                'title': html_encode(title),
+                                                'title': (exportFormat === 'HTML' ? html_encode(title) : title),
                                                 'shortLink': 'https://trello.com/c/' + card.shortLink,
-                                                'cardDescription': (exportFormat === 'XLSX' ? card.desc.substr(0, MAXCHARSPERCELL) : card.desc),
-                                                'checkLists': checkListsText.substr(0, MAXCHARSPERCELL),
+                                                'cardDescription': (exportFormat === 'XLSX' && card.desc ? card.desc.substr(0, MAXCHARSPERCELL) : card.desc),
+                                                'checkLists': (exportFormat === 'XLSX' && card.checkListsText ? card.checkListsText.substr(0, MAXCHARSPERCELL) : card.checkListsText),
                                                 'numberOfComments': numberOfComments,
-                                                'comments': commentsText.substr(0, MAXCHARSPERCELL),
-                                                'attachments': attachmentsText.substr(0, MAXCHARSPERCELL),
+                                                'comments': (exportFormat === 'XLSX' && card.commentsText ? card.commentsText.substr(0, MAXCHARSPERCELL) : card.commentsText),
+                                                'attachments': (exportFormat === 'XLSX' && card.attachmentsText ? card.attachmentsText.substr(0, MAXCHARSPERCELL) : card.attachmentsText),
                                                 'votes': card.idMembersVoted.length,
                                                 'spent': spent,
                                                 'estimate': estimate,
@@ -1913,8 +1931,10 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 var cfVals = loadCardCustomFields(card.id);
 
                                                 cfVals.forEach(function(dv) {
-                                                    rowData.customFields.push({ name: html_encode(dv.colName), value: html_encode(dv.value) });
-                                                    // console.log('LOADED CF ' + dv.colName + ' = ' + dv.value);
+                                                    rowData.customFields.push({
+                                                        name: (exportFormat === 'HTML' ? html_encode(dv.colName) : dv.colName),
+                                                        value: (exportFormat === 'HTML' ? html_encode(dv.value) : dv.value)
+                                                    });
                                                     rowData[dv.colName] = dv.value;
                                                 });
 

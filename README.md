@@ -10,6 +10,10 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.49
+
+- bugfix encoding (again), [issue #43](https://github.com/trapias/TrelloExport/issues/43)
+
 ### Version 1.9.48
 
 - bugfix HTML encoding for multiple properties

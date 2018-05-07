@@ -186,8 +186,11 @@
     - two Newsletter templates
 * Whatsnew for v. 1.9.49:
     - bugfix encoding (again), https://github.com/trapias/TrelloExport/issues/43
+* Whatsnew for v. 1.9.50:
+    - bugfix due date exported as "invalid date" in excel and markdown
+    - filters back working, https://github.com/trapias/TrelloExport/issues/45
 */
-var VERSION = '1.9.49';
+var VERSION = '1.9.50';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -397,7 +400,7 @@ if (typeof String.prototype.startsWith != 'function') {
 
 if (typeof String.prototype.stringContains != 'function') {
     String.prototype.stringContains = function(str) {
-        console.log(this + ' CONTAINS ' + str + ' ? ' + this.indexOf(str) >= 0);
+        // console.log(this + ' CONTAINS ' + str + ' ? ' + this.indexOf(str) >= 0);
         return this.indexOf(str) >= 0;
     };
 }
@@ -550,8 +553,10 @@ function searchupdateCheckItemStateOnCardAction(checkitemid, actions) {
         if (action.type == 'updateCheckItemStateOnCard') {
             if (action.data.checkItem.id == checkitemid) {
                 var d = new Date(action.date);
-                var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
-                completedObject.date = sActionDate;
+                if (d) {
+                    var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+                    completedObject.date = sActionDate;
+                }
                 if (action.memberCreator !== undefined) {
                     completedObject.by = (action.memberCreator.fullName !== undefined ? action.memberCreator.fullName : action.memberCreator.username);
                 } else {
@@ -1616,7 +1621,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             if (card.closed) {
                                                 title = '[archived] ' + title;
                                             }
-                                            var due = card.due || '';
+                                            var due = card.due || null;
 
                                             //Get all the Member IDs
                                             // console.log('Members: ' + card.idMembers.length);
@@ -1752,12 +1757,15 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 var jsonComment = {};
                                                                 //2013-08-08T06:57:18
                                                                 var d = new Date(action.date);
-                                                                jsonComment.date = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+                                                                if (d)
+                                                                    jsonComment.date = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 jsonComment.text = action.data.text;
                                                                 if (exportFormat === 'HTML') {
                                                                     jsonComment.text = converter.makeHtml(html_encode(jsonComment.text));
                                                                 }
-                                                                var sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+                                                                var sActionDate = '';
+                                                                if (d)
+                                                                    sActionDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 if (action.memberCreator !== undefined) {
                                                                     jsonComment.memberCreator = action.memberCreator;
                                                                     if (jsonComment.memberCreator.fullName !== undefined) {
@@ -1911,7 +1919,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'datetimeCreated': datetimeCreated,
                                                 'memberCreator': memberCreator,
                                                 'LastActivity': dateLastActivity.toLocaleDateString() + ' ' + dateLastActivity.toLocaleTimeString(),
-                                                'due': (card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
+                                                //'due': (card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
+                                                'due': (card.due ? new Date(card.due) : ''),
                                                 'datetimeDone': datetimeDone,
                                                 'memberDone': memberDone,
                                                 'completionTime': completionTime,
@@ -2996,7 +3005,8 @@ function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo, bchkHT
             mdOut += '#### Comments\n';
             for (i = 0; i < card.jsonComments.length; i++) {
                 var d = card.jsonComments[i].date;
-                mdOut += '**' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + ' ' + card.jsonComments[i].memberCreator.fullName + '**\n\n' + card.jsonComments[i].text + '\n\n';
+                if (d)
+                    mdOut += '**' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + ' ' + card.jsonComments[i].memberCreator.fullName + '**\n\n' + card.jsonComments[i].text + '\n\n';
             }
         }
 
@@ -3186,7 +3196,8 @@ function createOPMLExport(jsonComputedCards) {
             sXML += '<outline text="Comments">';
             for (i = 0; i < card.jsonComments.length; i++) {
                 var d = card.jsonComments[i].date;
-                sXML += '<outline text="' + escape4XML(card.jsonComments[i].text) + '" created="' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + '" createdBy="' + escape4XML(card.jsonComments[i].memberCreator.fullName) + '"></outline>';
+                if (d)
+                    sXML += '<outline text="' + escape4XML(card.jsonComments[i].text) + '" created="' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + '" createdBy="' + escape4XML(card.jsonComments[i].memberCreator.fullName) + '"></outline>';
             }
             sXML += '</outline>';
         }

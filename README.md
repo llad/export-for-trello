@@ -10,6 +10,11 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.50
+
+- bugfix due date exported as "invalid date" in excel and markdown
+- filters back working, [issue #45](https://github.com/trapias/TrelloExport/issues/45)
+
 ### Version 1.9.49
 
 - bugfix encoding (again), [issue #43](https://github.com/trapias/TrelloExport/issues/43)

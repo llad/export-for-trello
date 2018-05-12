@@ -32,7 +32,7 @@ window.URL = window.webkitURL || window.URL
 function createExcelExport() {
   'use strict'
   // RegEx to find the estimate and actual points for users of TrelloScrum
-  var pointReg = /^\((.*)\).*\[(.*)\]$/m
+  var pointReg = /^\((.*)\)(.*)\[(.*)\]$/m
 
   var boardExportURL = $('a.js-export-json').attr('href')
   //RegEx to extract Board ID
@@ -94,7 +94,7 @@ function createExcelExport() {
           var title = card.name,
             parsed = title.match(pointReg),
             ePoints = parsed ? parsed[1] : '',
-            aPoints = parsed ? parsed[2] : '',
+            aPoints = parsed ? parsed[3] : '',
             due = card.due || '',
             memberIDs,
             memberInitials = [],
@@ -104,7 +104,7 @@ function createExcelExport() {
             rArch,
             r
 
-          title = title.replace(pointReg, '')
+          title = parsed ? parsed[2] : title
 
           // tag archived cards
           if (card.closed) {

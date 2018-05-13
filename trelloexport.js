@@ -189,8 +189,11 @@
 * Whatsnew for v. 1.9.50:
     - bugfix due date exported as "invalid date" in excel and markdown
     - filters back working, https://github.com/trapias/TrelloExport/issues/45
+* Whatsnew for v. 1.9.51:
+    - bugfix export of checklists, comments and attachments to Excel
+    - change "prefix" filters to "string": all filters act as "string contains", no more "string starts with" since 1.9.40
 */
-var VERSION = '1.9.50';
+var VERSION = '1.9.51';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -659,10 +662,10 @@ function TrelloExportOptions() {
         'Template set:<br><input type="text" id="templateSetURL" placeholder="Insert URL or leave blank" title="Template-set URL - leave blank to use local templates" value="' + templateSetURL + '">Template:<br> <select id="twigTemplate" name="twigTemplate">' +
         availableTwigTemplatesOptions.join(',') +
         '</select></td></tr>' +
-        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set the List name prefix used to recognize your completed lists. See https://trapias.github.io/blog/trelloexport-1-9-13">Done lists name:</span></td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set prefix or leave empty"></td></tr>' +
-        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Only include items whose name starts with the specified prefix">Filter:</span></td><td>' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set the List name string used to recognize your completed lists. See https://trapias.github.io/blog/trelloexport-1-9-13">Done lists name:</span></td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set string or leave empty"></td></tr>' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Only include items whose name contains the specified string">Filter:</span></td><td>' +
         '<select id="filterMode"><option value="List">On List name</option><option value="Label">On Label name</option><option value="Card">On card name</option></select>' +
-        '<input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set prefix or leave empty" /></td></tr>' +
+        '<input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty" /></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose what data to export">Type of export:</span></td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '</table>';
 
@@ -875,7 +878,7 @@ function TrelloExportOptions() {
                     $('#optionslist').append('<tr><td>Select one or more Lists</td><td><select multiple id="choosenlist">' + sSelect + '</select></td></tr>');
                     break;
                 case 'board':
-                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set prefix or leave empty"></td></tr>');
+                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty"></td></tr>');
                     break;
                 case 'boards':
                     // get a list of all boards
@@ -883,7 +886,7 @@ function TrelloExportOptions() {
                     $('#customfields').attr('disabled', true);
                     sSelect = getallboards();
                     $('#optionslist').append('<tr><td>Select one or more Boards</td><td><select multiple id="choosenboards">' + sSelect + '</select></td></tr>');
-                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set prefix or leave empty"></td></tr>');
+                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty"></td></tr>');
                     break;
                 case 'cards':
                     // get a list of all lists in board and let user choose which to export
@@ -1723,7 +1726,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                         // issue #5
                                                                         // find who and when item was completed
                                                                         var oCompletedBy = searchupdateCheckItemStateOnCardAction(item.id, card.actions);
-                                                                        checkListsText += ' - ' + item.name + ' [' + item.state + ' ' + oCompletedBy.date + ' by ' + oCompletedBy.by + ']\n';
+                                                                        checkListsText += ' - ' + item.name + ' [' + item.state + ' ' + (oCompletedBy.date ? oCompletedBy.date : '') + (oCompletedBy.by ? ' by ' + oCompletedBy.by : '') + ']\n';
                                                                         cItem.completed = true;
                                                                         cItem.completedDate = oCompletedBy.date;
                                                                         cItem.completedBy = oCompletedBy.by;
@@ -1907,10 +1910,10 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'title': (exportFormat === 'HTML' ? html_encode(title) : title),
                                                 'shortLink': 'https://trello.com/c/' + card.shortLink,
                                                 'cardDescription': (exportFormat === 'XLSX' && card.desc ? card.desc.substr(0, MAXCHARSPERCELL) : card.desc),
-                                                'checkLists': (exportFormat === 'XLSX' && card.checkListsText ? card.checkListsText.substr(0, MAXCHARSPERCELL) : card.checkListsText),
+                                                'checkLists': (exportFormat === 'XLSX' && checkListsText !== undefined && checkListsText !== '' ? checkListsText.substr(0, MAXCHARSPERCELL) : checkListsText),
                                                 'numberOfComments': numberOfComments,
-                                                'comments': (exportFormat === 'XLSX' && card.commentsText ? card.commentsText.substr(0, MAXCHARSPERCELL) : card.commentsText),
-                                                'attachments': (exportFormat === 'XLSX' && card.attachmentsText ? card.attachmentsText.substr(0, MAXCHARSPERCELL) : card.attachmentsText),
+                                                'comments': (exportFormat === 'XLSX' && commentsText !== undefined && commentsText !== '' ? commentsText.substr(0, MAXCHARSPERCELL) : commentsText),
+                                                'attachments': (exportFormat === 'XLSX' && attachmentsText !== undefined && attachmentsText !== '' ? attachmentsText.substr(0, MAXCHARSPERCELL) : attachmentsText),
                                                 'votes': card.idMembersVoted.length,
                                                 'spent': spent,
                                                 'estimate': estimate,
@@ -2072,7 +2075,6 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                 }
             });
         });
-
         // iExcelItemsAsRows: 
         // 0=default
         // 1=checklist items as rows
@@ -2109,10 +2111,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                 toStringArray.push(card.cardDescription);
                                 break;
                             case 7:
-                                toStringArray.push(card.nTotalCheckListItems);
+                                toStringArray.push(nTotalCheckListItems);
                                 break;
                             case 8:
-                                toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                toStringArray.push(nTotalCheckListItemsCompleted);
                                 break;
                             case 9:
                                 toStringArray.push(card.checkLists);
@@ -2221,10 +2223,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                             toStringArray.push(card.cardDescription);
                                             break;
                                         case 7:
-                                            toStringArray.push(card.nTotalCheckListItems);
+                                            toStringArray.push(nTotalCheckListItems);
                                             break;
                                         case 8:
-                                            toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                            toStringArray.push(nTotalCheckListItemsCompleted);
                                             break;
                                         case 9:
                                             toStringArray.push(list.name);
@@ -2342,10 +2344,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push(card.cardDescription);
                                     break;
                                 case 7:
-                                    toStringArray.push(card.nTotalCheckListItems);
+                                    toStringArray.push(nTotalCheckListItems);
                                     break;
                                 case 8:
-                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    toStringArray.push(nTotalCheckListItemsCompleted);
                                     break;
                                 case 9:
                                     toStringArray.push('');
@@ -2465,10 +2467,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         toStringArray.push(card.cardDescription);
                                         break;
                                     case 7:
-                                        toStringArray.push(card.nTotalCheckListItems);
+                                        toStringArray.push(nTotalCheckListItems);
                                         break;
                                     case 8:
-                                        toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                        toStringArray.push(nTotalCheckListItemsCompleted);
                                         break;
                                     case 9:
                                         toStringArray.push(card.checkLists);
@@ -2573,10 +2575,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push(card.cardDescription);
                                     break;
                                 case 7:
-                                    toStringArray.push(card.nTotalCheckListItems);
+                                    toStringArray.push(nTotalCheckListItems);
                                     break;
                                 case 8:
-                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    toStringArray.push(nTotalCheckListItemsCompleted);
                                     break;
                                 case 9:
                                     toStringArray.push('');
@@ -2696,10 +2698,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         toStringArray.push(card.cardDescription);
                                         break;
                                     case 7:
-                                        toStringArray.push(card.nTotalCheckListItems);
+                                        toStringArray.push(nTotalCheckListItems);
                                         break;
                                     case 8:
-                                        toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                        toStringArray.push(nTotalCheckListItemsCompleted);
                                         break;
                                     case 9:
                                         toStringArray.push(card.checkLists);
@@ -2804,10 +2806,10 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     toStringArray.push(card.cardDescription);
                                     break;
                                 case 7:
-                                    toStringArray.push(card.nTotalCheckListItems);
+                                    toStringArray.push(nTotalCheckListItems);
                                     break;
                                 case 8:
-                                    toStringArray.push(card.nTotalCheckListItemsCompleted);
+                                    toStringArray.push(nTotalCheckListItemsCompleted);
                                     break;
                                 case 9:
                                     toStringArray.push('');

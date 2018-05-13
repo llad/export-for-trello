@@ -10,6 +10,11 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.51
+
+- bugfix export of checklists, comments and attachments to Excel
+- change "prefix" filters description to "string": all filters act as "string contains", no more "string starts with" since version 1.9.40
+
 ### Version 1.9.50
 
 - bugfix due date exported as "invalid date" in excel and markdown

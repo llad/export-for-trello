@@ -10,6 +10,12 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.52
+
+- avoid saving local CSS to localstorage
+- fix filters (reopened issue [issue #45](https://github.com/trapias/TrelloExport/issues/45)
+- paginate loading of cards in bunchs of 300 (fix [issue #47](https://github.com/trapias/TrelloExport/issues/47) due to recent API changes, see https://trello.com/c/8MJOLSCs/10-limit-actions-for-cards-requests)
+
 ### Version 1.9.51
 
 - bugfix export of checklists, comments and attachments to Excel

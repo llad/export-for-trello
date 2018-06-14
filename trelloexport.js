@@ -192,8 +192,12 @@
 * Whatsnew for v. 1.9.51:
     - bugfix export of checklists, comments and attachments to Excel
     - change "prefix" filters to "string": all filters act as "string contains", no more "string starts with" since 1.9.40
+* Whatsnew for v. 1.9.52:
+    - avoid saving local CSS to localstorage
+    - fix filters (reopened issue https://github.com/trapias/TrelloExport/issues/45)
+    - paginate loading of cards in bunchs of 300 (fix issue https://github.com/trapias/TrelloExport/issues/47)
 */
-var VERSION = '1.9.51';
+var VERSION = '1.9.52';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -332,7 +336,7 @@ var $,
     exportcards = [],
     nameListDone = "Done",
     filterListsNames = [],
-    pageSize = 1000,
+    pageSize = 300, // cfr https://trello.com/c/8MJOLSCs/10-limit-actions-for-cards-requests
     customFields = [];
 
 function sheet_from_array_of_arrays(data, opts) {
@@ -606,7 +610,7 @@ function TrelloExportOptions() {
     }
 
     var theCSS = chrome.extension.getURL('/templates/default.css') || 'https://trapias.github.io/assets/TrelloExport/default.css';
-    if (localStorage.TrelloExportCSS)
+    if (localStorage.TrelloExportCSS && !localStorage.TrelloExportCSS.startsWith('chrome'))
         theCSS = localStorage.TrelloExportCSS;
 
     var selectedMode = 'XLSX';
@@ -701,6 +705,16 @@ function TrelloExportOptions() {
                         // export type
                         var sexporttype = $('#exporttype').val();
                         localStorage.TrelloExportType = sexporttype;
+
+                        sfilterListsNames = $('.filterListsNames').val();
+                        if (sfilterListsNames.trim() !== '') {
+                            // parse list name filters
+                            filters = sfilterListsNames.split(','); // OR filters
+                            for (var nd = 0; nd < filters.length; nd++) {
+                                filterListsNames.push(filters[nd].toString().trim());
+                            }
+                        }
+
                         switch (sexporttype) {
                             case 'list':
                                 if ($('#choosenlist').length <= 0) {
@@ -718,14 +732,6 @@ function TrelloExportOptions() {
                                     // console.log('wait for lists to load');
                                     return false;
                                 } else {
-                                    sfilterListsNames = $('.filterListsNames').val();
-                                    if (sfilterListsNames.trim() !== '') {
-                                        // parse list name filters
-                                        filters = sfilterListsNames.split(',');
-                                        for (var nd = 0; nd < filters.length; nd++) {
-                                            filterListsNames.push(filters[nd].toString().trim());
-                                        }
-                                    }
                                     $('#choosenboards > option:selected').each(function() {
                                         exportboards.push($(this).val());
                                     });
@@ -745,14 +751,6 @@ function TrelloExportOptions() {
                                 break;
 
                             case 'board':
-                                sfilterListsNames = $('.filterListsNames').val();
-                                if (sfilterListsNames.trim() !== '') {
-                                    // parse list name filters
-                                    filters = sfilterListsNames.split(',');
-                                    for (var nd2 = 0; nd2 < filters.length; nd2++) {
-                                        filterListsNames.push(filters[nd2].toString().trim());
-                                    }
-                                }
                                 $('#choosenboards > option:selected').each(function() {
                                     exportboards.push($(this).val());
                                 });
@@ -771,8 +769,12 @@ function TrelloExportOptions() {
                         });
 
                         var css = $('#trelloExportCss').val();
-                        localStorage.TrelloExportCSS = css;
-                        // console.log('save ' + css);
+                        if (!css.startsWith('chrome')) {
+                            localStorage.TrelloExportCSS = css;
+                            // console.log('save ' + css);
+                        } else {
+                            localStorage.TrelloExportCSS = '';
+                        }
 
                         // filterMode
                         var filterMode = $('#filterMode').val();
@@ -1530,14 +1532,15 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                         do {
                             readCards = 0;
+
                             $.ajax({
-                                    url: "https://trello.com/1/lists/" + list_id + "/cards?filter=all&fields=all&checklists=all&members=true&member_fields=all&membersInvited=all&organization=true&organization_fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&attachments=true&limit=" + pageSize + "&before=" + sBefore,
+                                    url: 'https://trello.com/1/lists/' + list_id + '/cards?limit=' + pageSize + '&filter=all&fields=all&checklists=all&members=true&member_fields=all&membersInvited=all&organization=true&organization_fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&attachments=true' + "&before=" + sBefore,
                                     async: false,
                                 })
                                 .done(function(datacards) {
 
                                     readCards = datacards.length;
-                                    //console.log('evaluating ' + datacards.length + ' cards');
+                                    // console.log('evaluating ' + datacards.length + ' cards');
 
                                     // Iterate through each card and transform data as needed
                                     $.each(datacards, function(i, card) {
@@ -1675,6 +1678,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                             accept = true;
                                                             break;
                                                         }
+                                                        // console.log('LABEL : ' + label.name.toLowerCase() + ' VS FILTER ' + filterListsNames[y].trim().toLowerCase() + ' ==> ' + accept);
                                                     }
                                                 }
 
@@ -1958,7 +1962,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                 })
                                 .fail(function(jqXHR, textStatus, errorThrown) {
-                                    console.error("Error: " + jqXHR.statusText);
+                                    console.error("Error: " + jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText);
                                     readCards = -1;
                                     $.growl.error({
                                         title: "TrelloExport",
@@ -1974,7 +1978,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                 })
                 .fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error("Error: " + jqXHR.statusText);
+                    console.error("Error: " + jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText);
                     $.growl.error({
                         title: "TrelloExport",
                         message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,

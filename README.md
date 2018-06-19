@@ -1,14 +1,19 @@
 # TrelloExport
 
-TrelloExport is a Chrome extension to export data from Trello to Excel, Markdown, HTML and OPML.
+TrelloExport is a Chrome extension to export data from Trello to Excel, Markdown, HTML (with Twig templates) and OPML.
 
-You can now find it on [Chrome Web Store](https://chrome.google.com/webstore/detail/trelloexport/kmmnaeamjfdnbhljpedgfchjbkbomahp).
+You can find it on [Chrome Web Store](https://chrome.google.com/webstore/detail/trelloexport/kmmnaeamjfdnbhljpedgfchjbkbomahp).
 
 ## Support
 
 Please open issues at [Github](https://github.com/trapias/trelloExport/issues) or ask for help in the dedicated [Trello board](https://trello.com/b/MBnwUMwM/trelloexport).
 
 ## Release history
+
+### Version 1.9.53
+
+- new look: the options dialog is now built with [Tingle](https://robinparisi.github.io/tingle/)
+- new sponsor: support open source development! [read the blog post](https://trapias.github.io/blog/2018/06/19/TrelloExport-1.9.53)
 
 ### Version 1.9.52
 

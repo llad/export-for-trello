@@ -1,3 +1,7 @@
+#optionslist {
+    overflow-y: scroll;
+}
+
 #optionslist input,
 #optionslist select,
 #optionslist select option,
@@ -6,6 +10,11 @@
     padding: 5px;
     font-size: 14px;
     font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+}
+
+#optionslist span {
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
 #optionslist select {
@@ -39,4 +48,16 @@
     text-align: right;
     width: 70%;
     display: inline-block;
+}
+
+.sponsor img {
+    position: relative;
+    top: 10px;
+    left: 20px;
+    width: 150px;
+}
+
+.half {
+    display: inline-block;
+    width: 50%;
 }

@@ -1,0 +1,32 @@
+{
+  "name": "tingle",
+  "version": "0.13.2",
+  "homepage": "https://github.com/robinparisi/tingle",
+  "authors": [
+    "Robin Parisi <parisi.robin@gmail.com>"
+  ],
+  "main": "src/tingle.js",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    "gulpfile.js",
+    "doc",
+    "src",
+    "package.json",
+    "tingle.gif"
+  ],
+  "_release": "0.13.2",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.13.2",
+    "commit": "1d1cdf8988ab05b9d0853ff5122e01ec0bf7d8e4"
+  },
+  "_source": "https://github.com/robinparisi/tingle.git",
+  "_target": "^0.13.2",
+  "_originalSource": "tingle",
+  "_direct": true
+}

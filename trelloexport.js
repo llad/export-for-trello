@@ -196,8 +196,11 @@
     - avoid saving local CSS to localstorage
     - fix filters (reopened issue https://github.com/trapias/TrelloExport/issues/45)
     - paginate loading of cards in bunchs of 300 (fix issue https://github.com/trapias/TrelloExport/issues/47)
+* Whatsnew for v. 1.9.53:
+    - new look: the options dialog is now built with Tingle https://robinparisi.github.io/tingle/
+    - sponsor: support open source development!
 */
-var VERSION = '1.9.52';
+var VERSION = '1.9.53';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -652,8 +655,8 @@ function TrelloExportOptions() {
         availableTwigTemplatesOptions.push('<option value="' + availableTwigTemplates[t].url + '">' + availableTwigTemplates[t].description + '</option>');
     }
 
-    var sDialog = '<table id="optionslist">' +
-        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
+    var sDialog = '<span class="half"><h1>TrelloExport ' + VERSION + '</h1></span><span class="half blog-link"><h2><a target="_blank" href="https://trapias.github.io/blog/2018/06/19/TrelloExport-1.9.53">Read the Blog!</a></h2></span><table id="optionslist">' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to:</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived items">Archived items ' +
         '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments  <input type="checkbox" id="customfields" title="Export Custom Fields">Custom Fields</td></tr>' +
         '<tr id="cklAsRowsRow"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Create one Excel row per each card, checklist item, label or card member">One row per each:</span></td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
@@ -673,135 +676,141 @@ function TrelloExportOptions() {
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose what data to export">Type of export:</span></td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '</table>';
 
-    var dlgReady = new Promise(
-        function(resolve, reject) {
+    var modal = new tingle.modal({
+        footer: true,
+        stickyFooter: true,
+        closeMethods: ['overlay', 'button', 'escape'],
+        closeLabel: "Close",
+        // cssClass: ['custom-class-1', 'custom-class-2'],
+        onOpen: function() {
+            initializeModal();
+        },
+        // onClose: function() {
+        //     // console.log('modal closed');
+        // },
+        beforeClose: function() {
+            return true; // close the modal
+            // return false; // nothing happens
+        }
+    });
 
-            // open options dialog to configure & launch export
-            $.Zebra_Dialog(sDialog, {
-                title: 'TrelloExport ' + VERSION + ' <span class="blog-link"><a target="_blank" href="http://trapias.github.io/blog/2018/04/27/TrelloExport-1.9.43">Read the Blog!</a></span>',
-                type: false,
-                'buttons': [{
-                    caption: 'Export',
-                    callback: function() {
-                        var mode = $('#exportmode').val();
-                        localStorage.TrelloExportMode = mode;
-                        nameListDone = $('#setnameListDone').val();
-                        localStorage.TrelloExportListDone = nameListDone;
-                        var sfilterListsNames, filters, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages;
-                        bexportArchived = $('#exportArchived').is(':checked');
-                        bExportComments = $('#comments').is(':checked');
-                        bExportChecklists = $('#checklists').is(':checked');
-                        bExportAttachments = $('#attachments').is(':checked');
-                        iExcelItemsAsRows = 0;
-                        iExcelItemsAsRows = $('input[name=asrows]:checked').val();
-                        bckHTMLCardInfo = $('#ckHTMLCardInfo').is(':checked');
-                        bchkHTMLInlineImages = $('#chkHTMLInlineImages').is(':checked');
-                        var bExportCustomFields = $('#customfields').is(':checked');
+    modal.setContent(sDialog);
+    modal.setFooterContent('<span class="sponsor half"><a target="_new" href="https://bridge24.com/trello/?afmc=1w">Need more options? Try Bridge24! <img src="https://bridge24.com/wp-content/uploads/2017/12/bridge24-logo-header_dark-grey_2x.png" /></a></span>');
+    modal.addFooterBtn('Close', 'tingle-btn tingle-btn--default tingle-btn--pull-right', function() {
+        modal.close();
+    });
+    modal.addFooterBtn('Export', 'tingle-btn tingle-btn--trelloexport tingle-btn--pull-right', function() {
+        var mode = $('#exportmode').val();
+        localStorage.TrelloExportMode = mode;
+        nameListDone = $('#setnameListDone').val();
+        localStorage.TrelloExportListDone = nameListDone;
+        var sfilterListsNames, filters, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages;
+        bexportArchived = $('#exportArchived').is(':checked');
+        bExportComments = $('#comments').is(':checked');
+        bExportChecklists = $('#checklists').is(':checked');
+        bExportAttachments = $('#attachments').is(':checked');
+        iExcelItemsAsRows = 0;
+        iExcelItemsAsRows = $('input[name=asrows]:checked').val();
+        bckHTMLCardInfo = $('#ckHTMLCardInfo').is(':checked');
+        bchkHTMLInlineImages = $('#chkHTMLInlineImages').is(':checked');
+        var bExportCustomFields = $('#customfields').is(':checked');
 
-                        if (!bExportChecklists && iExcelItemsAsRows.toString() === '1') {
-                            // checklist items as rows only available if checklists are exported
-                            iExcelItemsAsRows = 0;
-                        }
-                        // export type
-                        var sexporttype = $('#exporttype').val();
-                        localStorage.TrelloExportType = sexporttype;
+        if (!bExportChecklists && iExcelItemsAsRows.toString() === '1') {
+            // checklist items as rows only available if checklists are exported
+            iExcelItemsAsRows = 0;
+        }
+        // export type
+        var sexporttype = $('#exporttype').val();
+        localStorage.TrelloExportType = sexporttype;
 
-                        sfilterListsNames = $('.filterListsNames').val();
-                        if (sfilterListsNames.trim() !== '') {
-                            // parse list name filters
-                            filters = sfilterListsNames.split(','); // OR filters
-                            for (var nd = 0; nd < filters.length; nd++) {
-                                filterListsNames.push(filters[nd].toString().trim());
-                            }
-                        }
+        sfilterListsNames = $('.filterListsNames').val();
+        if (sfilterListsNames.trim() !== '') {
+            // parse list name filters
+            filters = sfilterListsNames.split(','); // OR filters
+            for (var nd = 0; nd < filters.length; nd++) {
+                filterListsNames.push(filters[nd].toString().trim());
+            }
+        }
 
-                        switch (sexporttype) {
-                            case 'list':
-                                if ($('#choosenlist').length <= 0) {
-                                    // console.log('wait for lists to load');
-                                    return false;
-                                } else {
-                                    $('#choosenlist > option:selected').each(function() {
-                                        exportlists.push($(this).val());
-                                    });
-                                }
-                                break;
+        switch (sexporttype) {
+            case 'list':
+                if ($('#choosenlist').length <= 0) {
+                    // console.log('wait for lists to load');
+                    return false;
+                } else {
+                    $('#choosenlist > option:selected').each(function() {
+                        exportlists.push($(this).val());
+                    });
+                }
+                break;
 
-                            case 'boards':
-                                if ($('#choosenboards').length <= 0) {
-                                    // console.log('wait for lists to load');
-                                    return false;
-                                } else {
-                                    $('#choosenboards > option:selected').each(function() {
-                                        exportboards.push($(this).val());
-                                    });
-                                }
-                                break;
+            case 'boards':
+                if ($('#choosenboards').length <= 0) {
+                    // console.log('wait for lists to load');
+                    return false;
+                } else {
+                    $('#choosenboards > option:selected').each(function() {
+                        exportboards.push($(this).val());
+                    });
+                }
+                break;
 
-                            case 'cards':
-                                // choosenCards
-                                if ($('#choosenCards').length <= 0) {
-                                    // console.log('wait for cards to load');
-                                    return false;
-                                } else {
-                                    $('#choosenCards > option:selected').each(function() {
-                                        exportcards.push($(this).val());
-                                    });
-                                }
-                                break;
+            case 'cards':
+                // choosenCards
+                if ($('#choosenCards').length <= 0) {
+                    // console.log('wait for cards to load');
+                    return false;
+                } else {
+                    $('#choosenCards > option:selected').each(function() {
+                        exportcards.push($(this).val());
+                    });
+                }
+                break;
 
-                            case 'board':
-                                $('#choosenboards > option:selected').each(function() {
-                                    exportboards.push($(this).val());
-                                });
-                                break;
+            case 'board':
+                $('#choosenboards > option:selected').each(function() {
+                    exportboards.push($(this).val());
+                });
+                break;
 
-                            default:
-                                break;
-                        }
+            default:
+                break;
+        }
 
-                        var allColumns = $('#selectedColumns option');
-                        // console.log('allColumns = ' + JSON.stringify(allColumns));
-                        var selectedColumns = [];
-                        var selectedOptions = $('#selectedColumns option:selected');
-                        selectedOptions.each(function() {
-                            selectedColumns.push(this.value);
-                        });
-
-                        var css = $('#trelloExportCss').val();
-                        if (!css.startsWith('chrome')) {
-                            localStorage.TrelloExportCSS = css;
-                            // console.log('save ' + css);
-                        } else {
-                            localStorage.TrelloExportCSS = '';
-                        }
-
-                        // filterMode
-                        var filterMode = $('#filterMode').val();
-
-                        var templateURL = $('#twigTemplate').val();
-                        localStorage.TrelloExportTwigTemplate = templateURL;
-
-                        localStorage.TrelloExportTwigTemplatesURL = $('#templateSetURL').val();
-
-                        // launch export
-                        setTimeout(function() {
-                            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL);
-                        }, 500);
-                        return true;
-                    }
-                }, {
-                    caption: 'Cancel',
-                    callback: function() {
-                            return;
-                        } // close dialog
-                }]
-            });
-
-            resolve('dlgready');
+        var allColumns = $('#selectedColumns option');
+        // console.log('allColumns = ' + JSON.stringify(allColumns));
+        var selectedColumns = [];
+        var selectedOptions = $('#selectedColumns option:selected');
+        selectedOptions.each(function() {
+            selectedColumns.push(this.value);
         });
 
-    dlgReady.then(function() {
+        var css = $('#trelloExportCss').val();
+        if (!css.startsWith('chrome')) {
+            localStorage.TrelloExportCSS = css;
+            // console.log('save ' + css);
+        } else {
+            localStorage.TrelloExportCSS = '';
+        }
+
+        // filterMode
+        var filterMode = $('#filterMode').val();
+
+        var templateURL = $('#twigTemplate').val();
+        localStorage.TrelloExportTwigTemplate = templateURL;
+
+        localStorage.TrelloExportTwigTemplatesURL = $('#templateSetURL').val();
+
+        // launch export
+        setTimeout(function() {
+            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL);
+        }, 500);
+        modal.close();
+    });
+
+    modal.open();
+
+    function initializeModal() {
 
         $('[data-toggle="tooltip"]').tooltip();
 
@@ -870,8 +879,6 @@ function TrelloExportOptions() {
             localStorage.TrelloExportType = sexporttype;
             var sSelect;
             resetOptions();
-            var mode = $('#exportmode').val();
-            localStorage.TrelloExportMode = mode;
 
             switch (sexporttype) {
                 case 'list':
@@ -880,7 +887,7 @@ function TrelloExportOptions() {
                     $('#optionslist').append('<tr><td>Select one or more Lists</td><td><select multiple id="choosenlist">' + sSelect + '</select></td></tr>');
                     break;
                 case 'board':
-                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty"></td></tr>');
+                    // $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty"></td></tr>');
                     break;
                 case 'boards':
                     // get a list of all boards
@@ -888,7 +895,7 @@ function TrelloExportOptions() {
                     $('#customfields').attr('disabled', true);
                     sSelect = getallboards();
                     $('#optionslist').append('<tr><td>Select one or more Boards</td><td><select multiple id="choosenboards">' + sSelect + '</select></td></tr>');
-                    $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty"></td></tr>');
+                    // $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty"></td></tr>');
                     break;
                 case 'cards':
                     // get a list of all lists in board and let user choose which to export
@@ -919,7 +926,12 @@ function TrelloExportOptions() {
             $('#ckHTMLCardInfoRow').hide();
             $('#xlsColumns').hide();
             $('#renderingOptions').hide();
-            switch (mode) {
+
+            if (selectedMode)
+                $('#exportmode').val(selectedMode);
+
+            // var mode = $('#exportmode').val();
+            switch (selectedMode) {
                 case 'XLSX':
                     $('#cklAsRowsRow').show();
                     $('#xlsColumns').show();
@@ -936,14 +948,11 @@ function TrelloExportOptions() {
                     break;
             }
 
-
         });
-
-        if (selectedMode)
-            $('#exportmode').val(selectedMode);
 
         $('#exportmode').on('change', function() {
             var mode = $('#exportmode').val();
+            selectedMode = mode;
             localStorage.TrelloExportMode = mode;
             $('#cklAsRowsRow').hide();
             $('#ckHTMLCardInfoRow').hide();
@@ -987,7 +996,6 @@ function TrelloExportOptions() {
             setColumnHeadings($('input[name=asrows]:checked').val());
         });
 
-
         if (selectedType) {
             $('#exporttype').val(selectedType);
             $('#exporttype').trigger('change');
@@ -1001,8 +1009,8 @@ function TrelloExportOptions() {
         // todo: show progress
         //
 
-    });
-
+        // });
+    }
     return; // close dialog
 }
 
@@ -1214,12 +1222,8 @@ function getorganizations() {
             async: false,
         })
         .done(function(data) {
-            //console.log('getorganizations DATA:' + JSON.stringify(data));
             $.each(data, function(key, org) {
                 orgID.push({ id: org.id, displayName: org.displayName });
-                // console.log('ORG: ' + Object.keys(org));
-                // console.log('org = ' + org.displayName + ' with ' + org.idBoards.length + ' boards');
-
             });
             orgID.push({ id: null, displayName: 'Personal Boards' });
 
@@ -1273,7 +1277,6 @@ function getallboards() {
     var tmpIDs = [];
 
     allIDs.forEach(function(oid) {
-        // console.log('oid: ' + oid.id + ' = ' + oid.displayName);
 
         // GET /1/organizations/[idOrg or name]/boards
         var apiURL = "https://trello.com/1/organizations/" + oid.id + "/boards?lists=none&fields=name,idOrganization,closed";
@@ -1384,7 +1387,7 @@ function getallcardsinlist(listid) {
             }
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
-            console.log("getallcardsinlist error!!!");
+            console.error("getallcardsinlist error!!!");
             $.growl.error({
                 title: "TrelloExport",
                 message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,

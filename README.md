@@ -10,6 +10,11 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.54
+
+- bugfix: export checklists with no items when selecting "one row per each checklist item"
+- new feature: save selected columns to localStorage ([issue #48](https://github.com/trapias/TrelloExport/issues/48))
+
 ### Version 1.9.53
 
 - new look: the options dialog is now built with [Tingle](https://robinparisi.github.io/tingle/)

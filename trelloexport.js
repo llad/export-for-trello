@@ -199,8 +199,11 @@
 * Whatsnew for v. 1.9.53:
     - new look: the options dialog is now built with Tingle https://robinparisi.github.io/tingle/
     - sponsor: support open source development!
+* Whatsnew for v. 1.9.54:
+    - bugfix: export checklists with no items when selecting "one row per each checklist item"
+    - new feature: save selected columns to localStorage (issue https://github.com/trapias/TrelloExport/issues/48)
 */
-var VERSION = '1.9.53';
+var VERSION = '1.9.54';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -242,6 +245,7 @@ function CleanLocalStorage() {
     localStorage.TrelloExportType = '';
     localStorage.TrelloExportTwigTemplate = '';
     localStorage.TrelloExportTwigTemplatesURL = '';
+    localStorage.TrelloExportSelectedColumns = '';
     $.growl({
         title: "TrelloExport",
         message: "LocalStorage settings cleaned successfully. Please close and re-open TrelloExport.",
@@ -608,10 +612,18 @@ function TrelloExportOptions() {
     // https://github.com/davidstutz/bootstrap-multiselect
     var options = [];
     for (var x = 0; x < columnHeadings.length; x++) {
-        var o = '<option value="' + columnHeadings[x] + '" selected="true">' + columnHeadings[x] + '</option>';
+        var isSelected = 'selected';
+        // 1.9.54 saved selected columns
+        if (localStorage.TrelloExportSelectedColumns) {
+            isSelected = '';
+            var savedOptions = localStorage.TrelloExportSelectedColumns.split(',');
+            if ($.inArray(columnHeadings[x], savedOptions) > -1) {
+                isSelected = 'selected';
+            }
+        }
+        var o = '<option value="' + columnHeadings[x] + (isSelected === 'selected' ? '" selected="selected"' : '') + '">' + columnHeadings[x] + '</option>';
         options.push(o);
     }
-
     var theCSS = chrome.extension.getURL('/templates/default.css') || 'https://trapias.github.io/assets/TrelloExport/default.css';
     if (localStorage.TrelloExportCSS && !localStorage.TrelloExportCSS.startsWith('chrome'))
         theCSS = localStorage.TrelloExportCSS;
@@ -655,10 +667,14 @@ function TrelloExportOptions() {
         availableTwigTemplatesOptions.push('<option value="' + availableTwigTemplates[t].url + '">' + availableTwigTemplates[t].description + '</option>');
     }
 
+    var customFieldsON = false;
+    if (localStorage.TrelloExportCustomFields)
+        customFieldsON = true;
+
     var sDialog = '<span class="half"><h1>TrelloExport ' + VERSION + '</h1></span><span class="half blog-link"><h2><a target="_blank" href="https://trapias.github.io/blog/2018/06/19/TrelloExport-1.9.53">Read the Blog!</a></h2></span><table id="optionslist">' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to:</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived items">Archived items ' +
-        '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments  <input type="checkbox" id="customfields" title="Export Custom Fields">Custom Fields</td></tr>' +
+        '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments  <input type="checkbox" id="customfields" ' + (customFieldsON ? 'checked' : '') + ' title="Export Custom Fields">Custom Fields</td></tr>' +
         '<tr id="cklAsRowsRow"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Create one Excel row per each card, checklist item, label or card member">One row per each:</span></td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
         '<tr id="xlsColumns">' +
         '<td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose columns to be exported to Excel">Export columns</span></td>' +
@@ -778,12 +794,14 @@ function TrelloExportOptions() {
         }
 
         var allColumns = $('#selectedColumns option');
-        // console.log('allColumns = ' + JSON.stringify(allColumns));
+        console.log('allColumns = ' + JSON.stringify(allColumns));
         var selectedColumns = [];
         var selectedOptions = $('#selectedColumns option:selected');
         selectedOptions.each(function() {
             selectedColumns.push(this.value);
         });
+        // save selectedColumns
+        localStorage.TrelloExportSelectedColumns = selectedColumns;
 
         var css = $('#trelloExportCss').val();
         if (!css.startsWith('chrome')) {
@@ -813,8 +831,12 @@ function TrelloExportOptions() {
     function initializeModal() {
 
         $('[data-toggle="tooltip"]').tooltip();
-
-        $('#selectedColumns').multiselect({ includeSelectAllOption: true });
+        $('#selectedColumns').multiselect({
+            includeSelectAllOption: true,
+            onSelectAll: function() {
+                localStorage.TrelloExportSelectedColumns = '';
+            }
+        });
 
         $('button.multiselect.dropdown-toggle.btn.btn-default').click(function() {
             $('.multiselect-container.dropdown-menu').toggle();
@@ -992,7 +1014,17 @@ function TrelloExportOptions() {
             setColumnHeadings(this.value);
         });
 
+        if (localStorage.TrelloExportCustomFields) {
+            $('#customfields').attr('checked', true);
+            setColumnHeadings($('input[name=asrows]:checked').val());
+        }
+
         $('#customfields').click(function() {
+            var isON = $('#customfields').is(':checked');
+            if (isON)
+                localStorage.TrelloExportCustomFields = 'on';
+            else
+                localStorage.TrelloExportCustomFields = '';
             setColumnHeadings($('input[name=asrows]:checked').val());
         });
 
@@ -1006,10 +1038,7 @@ function TrelloExportOptions() {
             $('#twigTemplate').trigger('change');
         }
 
-        // todo: show progress
-        //
 
-        // });
     }
     return; // close dialog
 }
@@ -1062,8 +1091,17 @@ function setColumnHeadings(asrowsMode) {
         loadCustomFields(columnHeadings);
 
     var options = [];
+
+    isSelected = 'selected';
     for (var x = 0; x < columnHeadings.length; x++) {
-        var o = '<option value="' + columnHeadings[x] + '" selected="true">' + columnHeadings[x] + '</option>';
+        if (localStorage.TrelloExportSelectedColumns) {
+            isSelected = '';
+            var savedOptions = localStorage.TrelloExportSelectedColumns.split(',');
+            if ($.inArray(columnHeadings[x], savedOptions) > -1) {
+                isSelected = 'selected';
+            }
+        }
+        var o = '<option value="' + columnHeadings[x] + (isSelected === 'selected' ? '" selected="selected"' : '') + '>' + columnHeadings[x] + '</option>';
         options.push(o);
     }
 
@@ -1072,7 +1110,12 @@ function setColumnHeadings(asrowsMode) {
         .remove()
         .end()
         .append(options.join(''))
-        .multiselect({ includeSelectAllOption: true });
+        .multiselect({
+            includeSelectAllOption: true,
+            onSelectAll: function() {
+                localStorage.TrelloExportSelectedColumns = '';
+            }
+        });
 
     $('button.multiselect.dropdown-toggle.btn.btn-default').click(function() {
         $('.multiselect-container.dropdown-menu').toggle();
@@ -1168,7 +1211,7 @@ function resetOptions() {
     $('#choosenCards').parent().parent().remove();
     $('#choosenSinglelist').parent().parent().remove();
     $('#filterListsNames').parent().parent().remove();
-    $('#customfields').attr('checked', false);
+    // $('#customfields').attr('checked', false);
     $('#customfields').attr('disabled', false);
 }
 
@@ -2200,8 +2243,18 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                 if (card.jsonCheckLists.length > 0) {
 
                     card.jsonCheckLists.forEach(function(list) {
-                        list.items.forEach(function(it) {
 
+                        if (!list.items || list.items.length === 0) {
+                            // checklist with no items
+                            list.items.push({
+                                name: null,
+                                completed: null,
+                                completedDate: null,
+                                completedBy: null
+                            });
+                        }
+
+                        list.items.forEach(function(it) {
                             toStringArray = [];
                             // filter columns
                             for (var nCol = 0; nCol < allColumns.length; nCol++) {

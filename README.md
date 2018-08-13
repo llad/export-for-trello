@@ -10,6 +10,13 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.55
+
+Fixing errors in Excel export:
+
+- fix exporting of custom fields (include only if requested)
+- fix exporting of custom fields saved to localstorage
+
 ### Version 1.9.54
 
 - bugfix: export checklists with no items when selecting "one row per each checklist item"

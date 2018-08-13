@@ -202,8 +202,11 @@
 * Whatsnew for v. 1.9.54:
     - bugfix: export checklists with no items when selecting "one row per each checklist item"
     - new feature: save selected columns to localStorage (issue https://github.com/trapias/TrelloExport/issues/48)
+* Whatsnew for v. 1.9.55:
+    - fix exporting of custom fields (include only if requested)
+    - fix exporting of custom fields saved to localstorage
 */
-var VERSION = '1.9.54';
+var VERSION = '1.9.55';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -612,17 +615,13 @@ function TrelloExportOptions() {
     // https://github.com/davidstutz/bootstrap-multiselect
     var options = [];
     for (var x = 0; x < columnHeadings.length; x++) {
-        var isSelected = 'selected';
         // 1.9.54 saved selected columns
         if (localStorage.TrelloExportSelectedColumns) {
-            isSelected = '';
             var savedOptions = localStorage.TrelloExportSelectedColumns.split(',');
             if ($.inArray(columnHeadings[x], savedOptions) > -1) {
-                isSelected = 'selected';
+                options.push(columnHeadings[x]);
             }
         }
-        var o = '<option value="' + columnHeadings[x] + (isSelected === 'selected' ? '" selected="selected"' : '') + '">' + columnHeadings[x] + '</option>';
-        options.push(o);
     }
     var theCSS = chrome.extension.getURL('/templates/default.css') || 'https://trapias.github.io/assets/TrelloExport/default.css';
     if (localStorage.TrelloExportCSS && !localStorage.TrelloExportCSS.startsWith('chrome'))
@@ -794,7 +793,7 @@ function TrelloExportOptions() {
         }
 
         var allColumns = $('#selectedColumns option');
-        console.log('allColumns = ' + JSON.stringify(allColumns));
+        // console.log('allColumns = ' + JSON.stringify(allColumns));
         var selectedColumns = [];
         var selectedOptions = $('#selectedColumns option:selected');
         selectedOptions.each(function() {
@@ -1099,9 +1098,11 @@ function setColumnHeadings(asrowsMode) {
             var savedOptions = localStorage.TrelloExportSelectedColumns.split(',');
             if ($.inArray(columnHeadings[x], savedOptions) > -1) {
                 isSelected = 'selected';
+                // console.log('2ADD COLUMN ' + columnHeadings[x]);
+                // options.push(columnHeadings[x]);
             }
         }
-        var o = '<option value="' + columnHeadings[x] + (isSelected === 'selected' ? '" selected="selected"' : '') + '>' + columnHeadings[x] + '</option>';
+        var o = '<option value="' + columnHeadings[x] + '" ' + (isSelected === 'selected' ? '" selected="selected"' : '') + '>' + columnHeadings[x] + '</option>';
         options.push(o);
     }
 
@@ -2048,19 +2049,19 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
         switch (exportFormat) {
 
             case 'XLSX':
-                createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, selectedColumns);
+                createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, selectedColumns, bExportCustomFields);
                 break;
 
             case 'MD':
-                createMarkdownExport(jsonComputedCards, true, bckHTMLCardInfo, bchkHTMLInlineImages);
+                createMarkdownExport(jsonComputedCards, true, bckHTMLCardInfo, bchkHTMLInlineImages, bExportCustomFields);
                 break;
 
             case 'HTML':
-                createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css, templateURL);
+                createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css, templateURL, bExportCustomFields);
                 break;
 
             case 'OPML':
-                createOPMLExport(jsonComputedCards);
+                createOPMLExport(jsonComputedCards, bExportCustomFields);
                 break;
 
             default:
@@ -2088,7 +2089,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 }
 
 // createExcelExport: export to XLSX
-function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, columnHeadings) {
+function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, columnHeadings, bExportCustomFields) {
     console.log('TrelloExport exporting to Excel ' + jsonComputedCards.length + ' cards...');
 
     // prepare Workbook
@@ -2223,7 +2224,15 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
                             default:
                                 // custom fields
-                                toStringArray.push(card[allColumns[nCol].value]);
+                                if (bExportCustomFields) {
+                                    if (localStorage.TrelloExportSelectedColumns) {
+                                        if (localStorage.TrelloExportSelectedColumns.stringContains(allColumns[nCol].value)) {
+                                            toStringArray.push(card[allColumns[nCol].value]);
+                                        }
+                                    } else {
+                                        toStringArray.push(card[allColumns[nCol].value]);
+                                    }
+                                }
                                 break;
                         }
                     }
@@ -2356,7 +2365,15 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                             break;
                                         default:
                                             // custom fields
-                                            toStringArray.push(card[allColumns[nCol].value]);
+                                            if (bExportCustomFields) {
+                                                if (localStorage.TrelloExportSelectedColumns) {
+                                                    if (localStorage.TrelloExportSelectedColumns.stringContains(allColumns[nCol].value)) {
+                                                        toStringArray.push(card[allColumns[nCol].value]);
+                                                    }
+                                                } else {
+                                                    toStringArray.push(card[allColumns[nCol].value]);
+                                                }
+                                            }
                                             break;
                                     }
                                 }
@@ -2477,7 +2494,15 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     break;
                                 default:
                                     // custom fields
-                                    toStringArray.push(card[allColumns[nCol].value]);
+                                    if (bExportCustomFields) {
+                                        if (localStorage.TrelloExportSelectedColumns) {
+                                            if (localStorage.TrelloExportSelectedColumns.stringContains(allColumns[nCol].value)) {
+                                                toStringArray.push(card[allColumns[nCol].value]);
+                                            }
+                                        } else {
+                                            toStringArray.push(card[allColumns[nCol].value]);
+                                        }
+                                    }
                                     break;
                             }
                         }
@@ -2588,7 +2613,15 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         break;
                                     default:
                                         // custom fields
-                                        toStringArray.push(card[allColumns[nCol].value]);
+                                        if (bExportCustomFields) {
+                                            if (localStorage.TrelloExportSelectedColumns) {
+                                                if (localStorage.TrelloExportSelectedColumns.stringContains(allColumns[nCol].value)) {
+                                                    toStringArray.push(card[allColumns[nCol].value]);
+                                                }
+                                            } else {
+                                                toStringArray.push(card[allColumns[nCol].value]);
+                                            }
+                                        }
                                         break;
                                 }
                             }
@@ -2708,7 +2741,15 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     break;
                                 default:
                                     // custom fields
-                                    toStringArray.push(card[allColumns[nCol].value]);
+                                    if (bExportCustomFields) {
+                                        if (localStorage.TrelloExportSelectedColumns) {
+                                            if (localStorage.TrelloExportSelectedColumns.stringContains(allColumns[nCol].value)) {
+                                                toStringArray.push(card[allColumns[nCol].value]);
+                                            }
+                                        } else {
+                                            toStringArray.push(card[allColumns[nCol].value]);
+                                        }
+                                    }
                                     break;
                             }
                         }
@@ -2819,7 +2860,15 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         break;
                                     default:
                                         // custom fields
-                                        toStringArray.push(card[allColumns[nCol].value]);
+                                        if (bExportCustomFields) {
+                                            if (localStorage.TrelloExportSelectedColumns) {
+                                                if (localStorage.TrelloExportSelectedColumns.stringContains(allColumns[nCol].value)) {
+                                                    toStringArray.push(card[allColumns[nCol].value]);
+                                                }
+                                            } else {
+                                                toStringArray.push(card[allColumns[nCol].value]);
+                                            }
+                                        }
                                         break;
                                 }
                             }
@@ -2939,7 +2988,15 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     break;
                                 default:
                                     // custom fields
-                                    toStringArray.push(card[allColumns[nCol].value]);
+                                    if (bExportCustomFields) {
+                                        if (localStorage.TrelloExportSelectedColumns) {
+                                            if (localStorage.TrelloExportSelectedColumns.stringContains(allColumns[nCol].value)) {
+                                                toStringArray.push(card[allColumns[nCol].value]);
+                                            }
+                                        } else {
+                                            toStringArray.push(card[allColumns[nCol].value]);
+                                        }
+                                    }
                                     break;
                             }
                         }
@@ -2999,7 +3056,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
     });
 }
 
-function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo, bchkHTMLInlineImages) {
+function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo, bchkHTMLInlineImages, bExportCustomFields) {
     console.log('TrelloExport exporting to Markdown ' + jsonComputedCards.length + ' cards...');
 
     // console.log('jsonComputedCards: ' + JSON.stringify(jsonComputedCards));
@@ -3143,7 +3200,7 @@ function loadTemplate(url) {
 
 }
 
-function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css, templateURL) {
+function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css, templateURL, bExportCustomFields) {
 
     if (!templateURL) {
         templateURL = chrome.extension.getURL('/templates/html.twig');
@@ -3196,7 +3253,7 @@ function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImag
 
 }
 
-function createOPMLExport(jsonComputedCards) {
+function createOPMLExport(jsonComputedCards, bExportCustomFields) {
 
     var now = new Date();
     var sXML = '<?xml version="1.0" encoding="utf-8"?><opml version="1.0">';

@@ -10,6 +10,10 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.57
+
+- fix columns loading
+
 ### Version 1.9.56
 
 - enable export of custom fields for the 'Multiple Boards' type of export (please see the [Wiki](https://github.com/trapias/TrelloExport/wiki) for limits)

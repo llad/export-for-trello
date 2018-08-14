@@ -207,8 +207,10 @@
     - fix exporting of custom fields saved to localstorage
 * Whatsnew for v. 1.9.56:
     - enable export of custom fields for the 'Multiple Boards' type of export
+* Whatsnew for v. 1.9.57:
+    - fix columns loading
 */
-var VERSION = '1.9.56';
+var VERSION = '1.9.57';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -623,6 +625,8 @@ function TrelloExportOptions() {
             if ($.inArray(columnHeadings[x], savedOptions) > -1) {
                 options.push(columnHeadings[x]);
             }
+        } else {
+            options.push(columnHeadings[x]);
         }
     }
     var theCSS = chrome.extension.getURL('/templates/default.css') || 'https://trapias.github.io/assets/TrelloExport/default.css';

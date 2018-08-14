@@ -205,8 +205,10 @@
 * Whatsnew for v. 1.9.55:
     - fix exporting of custom fields (include only if requested)
     - fix exporting of custom fields saved to localstorage
+* Whatsnew for v. 1.9.56:
+    - enable export of custom fields for the 'Multiple Boards' type of export
 */
-var VERSION = '1.9.55';
+var VERSION = '1.9.56';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -912,8 +914,8 @@ function TrelloExportOptions() {
                     break;
                 case 'boards':
                     // get a list of all boards
-                    $('#customfields').attr('checked', false); // custom fields not yet available for multiple boards
-                    $('#customfields').attr('disabled', true);
+                    // $('#customfields').attr('checked', false); // custom fields not yet available for multiple boards
+                    // $('#customfields').attr('disabled', true);
                     sSelect = getallboards();
                     $('#optionslist').append('<tr><td>Select one or more Boards</td><td><select multiple id="choosenboards">' + sSelect + '</select></td></tr>');
                     // $('#optionslist').append('<tr><td>Filter lists by name:</td><td><input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty"></td></tr>');
@@ -928,7 +930,7 @@ function TrelloExportOptions() {
                         var selectedList = $('#choosenSinglelist').val();
                         exportlists = [];
                         exportlists.push(selectedList);
-                        // get card in list
+                        // get cards in list
                         sSelect = getallcardsinlist(selectedList);
                         $('#optionslist').append('<tr><td>Select one or more cards</td><td><select multiple id="choosenCards">' + sSelect + '</select></td></tr>');
                     });

@@ -1,7 +1,7 @@
 /*
  * TrelloExport
  *
- * A Chrome extension for Trello, that allows to export boards to Excel spreadsheets, HTML, Markdown and OPML.
+ * A Chrome extension for Trello, that allows to export boards to Excel spreadsheets, HTML with Twig templates, Markdown and OPML.
  *
  * Forked by @trapias (Alberto Velo)
  *  https://github.com/trapias/trelloExport
@@ -209,8 +209,12 @@
     - enable export of custom fields for the 'Multiple Boards' type of export
 * Whatsnew for v. 1.9.57:
     - fix columns loading
+* Whatsnew for v. 1.9.58:
+    - modified description in manifest to hopefully improve Chrome Web Store indexing
+    - really fix columns loading
+    - fix custom fields duplicates in excel
 */
-var VERSION = '1.9.57';
+var VERSION = '1.9.58';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -619,16 +623,19 @@ function TrelloExportOptions() {
     // https://github.com/davidstutz/bootstrap-multiselect
     var options = [];
     for (var x = 0; x < columnHeadings.length; x++) {
+        var isSelected = "selected";
         // 1.9.54 saved selected columns
         if (localStorage.TrelloExportSelectedColumns) {
+            isSelected = '';
             var savedOptions = localStorage.TrelloExportSelectedColumns.split(',');
             if ($.inArray(columnHeadings[x], savedOptions) > -1) {
-                options.push(columnHeadings[x]);
+                isSelected = "selected";
             }
-        } else {
-            options.push(columnHeadings[x]);
         }
+        var o = '<option value="' + columnHeadings[x] + '" ' + (isSelected === 'selected' ? 'selected="selected"' : '') + '>' + columnHeadings[x] + '</option>';
+        options.push(o);
     }
+
     var theCSS = chrome.extension.getURL('/templates/default.css') || 'https://trapias.github.io/assets/TrelloExport/default.css';
     if (localStorage.TrelloExportCSS && !localStorage.TrelloExportCSS.startsWith('chrome'))
         theCSS = localStorage.TrelloExportCSS;
@@ -1092,10 +1099,11 @@ function setColumnHeadings(asrowsMode) {
 
     var bExportCustomFields = $('#customfields').is(':checked');
 
-    if (bExportCustomFields)
+    if (bExportCustomFields) {
+        customFields = [];
         loadCustomFields(columnHeadings);
-
-    var options = [];
+    }
+    var ColumnOptions = [];
 
     isSelected = 'selected';
     for (var x = 0; x < columnHeadings.length; x++) {
@@ -1108,15 +1116,14 @@ function setColumnHeadings(asrowsMode) {
                 // options.push(columnHeadings[x]);
             }
         }
-        var o = '<option value="' + columnHeadings[x] + '" ' + (isSelected === 'selected' ? '" selected="selected"' : '') + '>' + columnHeadings[x] + '</option>';
-        options.push(o);
+        var o = '<option value="' + columnHeadings[x] + '" ' + (isSelected === 'selected' ? 'selected="selected"' : '') + '>' + columnHeadings[x] + '</option>';
+        ColumnOptions.push(o);
     }
-
     $('#selectedColumns').multiselect('destroy')
         .find('option')
         .remove()
         .end()
-        .append(options.join(''))
+        .append(ColumnOptions.join(''))
         .multiselect({
             includeSelectAllOption: true,
             onSelectAll: function() {

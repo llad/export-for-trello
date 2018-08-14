@@ -10,6 +10,12 @@ Please open issues at [Github](https://github.com/trapias/trelloExport/issues) o
 
 ## Release history
 
+### Version 1.9.58
+
+- modified description in manifest to hopefully improve Chrome Web Store indexing
+- really fix columns loading
+- fix custom fields duplicates in excel
+
 ### Version 1.9.57
 
 - fix columns loading

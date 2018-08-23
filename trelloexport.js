@@ -213,8 +213,11 @@
     - modified description in manifest to hopefully improve Chrome Web Store indexing
     - really fix columns loading
     - fix custom fields duplicates in excel
+* Whatsnew for v. 1.9.59:
+    - HTML Twig: added "linkdoi" function to automatically link Digital Object Identifier (DOI) numbers to their URL, see http://www.doi.org/
+    - Apply filters with AND (all must match) or OR (match any) condition (issue #38)
 */
-var VERSION = '1.9.58';
+var VERSION = '1.9.59';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -337,8 +340,6 @@ var $,
     xlsx,
     ArrayBuffer,
     Uint8Array,
-    // Blob,
-    // saveAs,
     actionsCreateCard = [],
     actionsMoveCard = [],
     actionsCommentCard = [],
@@ -358,7 +359,6 @@ var $,
     customFields = [];
 
 function sheet_from_array_of_arrays(data, opts) {
-    // console.log('sheet_from_array_of_arrays ' + data);
     var ws = {};
     var range = {
         s: {
@@ -460,7 +460,6 @@ function getCommentCardActions(boardID, idCard) {
         }
     });
     var selectedActions = null;
-    // get the right actions for board
     for (var i = 0; i < actionsCommentCard.length; i++) {
         if (actionsCommentCard[i].card === idCard) {
             selectedActions = actionsCommentCard[i].data;
@@ -683,7 +682,7 @@ function TrelloExportOptions() {
     if (localStorage.TrelloExportCustomFields)
         customFieldsON = true;
 
-    var sDialog = '<span class="half"><h1>TrelloExport ' + VERSION + '</h1></span><span class="half blog-link"><h2><a target="_blank" href="https://trapias.github.io/blog/2018/06/19/TrelloExport-1.9.53">Read the Blog!</a></h2></span><table id="optionslist">' +
+    var sDialog = '<span class="half"><h1>TrelloExport ' + VERSION + '</h1></span><span class="half blog-link"><h3><a target="_blank" href="https://github.com/trapias/TrelloExport/wiki">Help</a>&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://trapias.github.io/blog/2018/06/19/TrelloExport-1.9.53">Read the Blog!</a></h3></span><table id="optionslist">' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to:</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived items">Archived items ' +
         '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments  <input type="checkbox" id="customfields" ' + (customFieldsON ? 'checked' : '') + ' title="Export Custom Fields">Custom Fields</td></tr>' +
@@ -700,6 +699,7 @@ function TrelloExportOptions() {
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Set the List name string used to recognize your completed lists. See https://trapias.github.io/blog/trelloexport-1-9-13">Done lists name:</span></td><td><input type="text" size="4" name="setnameListDone" id="setnameListDone" value="' + nameListDone + '"  placeholder="Set string or leave empty"></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Only include items whose name contains the specified string">Filter:</span></td><td>' +
         '<select id="filterMode"><option value="List">On List name</option><option value="Label">On Label name</option><option value="Card">On card name</option></select>' +
+        '<br/><input type="checkbox" id="chkANDORFilter"> <span title="Check to match all filters with an AND condition, uncheck to match any filter with an OR condition">Enable AND filter</span><br/>' +
         '<input type="text" size="4" name="filterListsNames" class="filterListsNames" value="" placeholder="Set string or leave empty" /></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose what data to export">Type of export:</span></td><td><select id="exporttype"><option value="board">Current Board</option><option value="list">Select Lists in current Board</option><option value="boards">Multiple Boards</option><option value="cards">Select cards in a list</option></select></td></tr>' +
         '</table>';
@@ -825,6 +825,7 @@ function TrelloExportOptions() {
 
         // filterMode
         var filterMode = $('#filterMode').val();
+        var chkANDORFilter = $('#chkANDORFilter').is(':checked');
 
         var templateURL = $('#twigTemplate').val();
         localStorage.TrelloExportTwigTemplate = templateURL;
@@ -833,7 +834,7 @@ function TrelloExportOptions() {
 
         // launch export
         setTimeout(function() {
-            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL);
+            loadData(mode, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL, chkANDORFilter);
         }, 500);
         modal.close();
     });
@@ -1164,7 +1165,6 @@ function loadCardCustomFields(cardID) {
         dataType: 'json',
         async: false,
         success: function(pdata) {
-
             pdata.forEach(function(dv) {
                 var theValue = dv.value;
                 if (!theValue)
@@ -1180,7 +1180,6 @@ function loadCardCustomFields(cardID) {
 }
 
 function lookupCustomDataValue(key, cardCFValue) {
-
     if (!cardCFValue) {
         console.error('lookupCustomDataValue: card CF value for card ' + key + ' NOT AVAILABLE: ' + cardCFValue);
         return null;
@@ -1188,7 +1187,6 @@ function lookupCustomDataValue(key, cardCFValue) {
     var v = null;
     customFields.some(function(cf) {
         if (cf.id.toString().trim() === key.toString().trim()) {
-
             switch (cf.type) {
                 case 'checkbox':
                     v = { name: cf.name, value: cardCFValue.checked };
@@ -1212,7 +1210,6 @@ function lookupCustomDataValue(key, cardCFValue) {
                     v = { name: cf.name, value: cardCFValue[cf.type] };
                     break;
             }
-
             return v;
         }
     });
@@ -1470,8 +1467,7 @@ function extractFloat(str, regex, groupIndex) {
     return value;
 }
 
-
-function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL) {
+function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL, chkANDORFilter) {
     console.log('TrelloExport loading data, export format: ' + exportFormat + '...');
     var converter = new showdown.Converter();
     var promLoadData = new Promise(
@@ -1556,7 +1552,6 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                         }
 
                         if (exportlists.length > 0) {
-
                             if ($.inArray(list_id, exportlists) === -1) {
                                 console.log('skip list ' + listName);
                                 return true;
@@ -1564,19 +1559,28 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                         }
 
                         // 1.9.14: filter lists by name
-                        var accept = true;
+                        var accept = true,
+                            nListAccepted = 0;
                         if (filterListsNames.length > 0 && filterMode === 'List') {
                             for (var y = 0; y < filterListsNames.length; y++) {
                                 if (!listName.toLowerCase().stringContains(filterListsNames[y].trim().toLowerCase())) {
                                     accept = false;
                                 } else {
                                     accept = true;
-                                    break;
+                                    nListAccepted++;
+                                    // break;
                                 }
                             }
                         }
+                        if (chkANDORFilter && filterMode === 'List') {
+                            // AND filter: must match all filters
+                            if (nListAccepted < filterListsNames.length)
+                                accept = false;
+                            else
+                                accept = true;
+                        }
                         if (!accept) {
-                            // console.log('skipping list ' + listName);
+                            // console.log('skipping not accepted list ' + listName);
                             return true;
                         }
 
@@ -1634,16 +1638,25 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 }
                                             }
 
-                                            var accept = true;
+                                            var accept = true,
+                                                nCardAccepted = 0;
                                             if (filterListsNames.length > 0 && filterMode === 'Card') {
                                                 for (var y = 0; y < filterListsNames.length; y++) {
                                                     if (!card.name.toLowerCase().stringContains(filterListsNames[y].trim().toLowerCase())) {
                                                         accept = false;
                                                     } else {
                                                         accept = true;
-                                                        break;
+                                                        nCardAccepted++;
+                                                        // break;
                                                     }
                                                 }
+                                            }
+                                            if (chkANDORFilter && filterMode === 'Card') {
+                                                // AND filter: must match all filters
+                                                if (nCardAccepted < filterListsNames.length)
+                                                    accept = false;
+                                                else
+                                                    accept = true;
                                             }
                                             if (!accept) {
                                                 console.log('skipping card ' + card.name);
@@ -1671,11 +1684,21 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                             // Trello Plus Spent/Estimate
                                             spent = extractFloat(title, SpentEstRegex, 2);
+                                            if (isNaN(spent))
+                                                spent = 0;
+
                                             estimate = extractFloat(title, SpentEstRegex, 5);
+                                            if (isNaN(estimate))
+                                                estimate = 0;
 
                                             // Scrum for Trello Points Estimate/Consumed
                                             points_estimate = extractFloat(title, PointsEstRegex, 2);
+                                            if (isNaN(points_estimate))
+                                                points_estimate = 0;
+
                                             points_consumed = extractFloat(title, PointsConRegex, 2);
+                                            if (isNaN(points_consumed))
+                                                points_consumed = 0;
 
                                             // Clean-up title
                                             title = title.replace(SpentEstRegex, '');
@@ -1710,7 +1733,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
                                             //Get all labels
                                             var labels = [],
-                                                jsonLabels = [];
+                                                jsonLabels = [],
+                                                nAccepted = 0;
                                             if (card.labels.length <= 0 && filterListsNames.length > 0 && filterMode === 'Label') {
                                                 // filtering by label name: skip cards without labels
                                                 accept = false;
@@ -1727,23 +1751,27 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 } else {
                                                     labels.push(label.color);
                                                 }
-
                                                 if (filterListsNames.length > 0 && filterMode === 'Label') {
                                                     for (var y = 0; y < filterListsNames.length; y++) {
-                                                        if (accept)
-                                                            continue;
+                                                        // if (accept)
+                                                        //     continue;
                                                         if (!label.name.toLowerCase().stringContains(filterListsNames[y].trim().toLowerCase())) {
                                                             accept = false;
                                                         } else {
+                                                            nAccepted++;
                                                             accept = true;
                                                             break;
                                                         }
-                                                        // console.log('LABEL : ' + label.name.toLowerCase() + ' VS FILTER ' + filterListsNames[y].trim().toLowerCase() + ' ==> ' + accept);
                                                     }
                                                 }
-
-
                                             });
+                                            if (chkANDORFilter && filterMode === 'Label') {
+                                                // AND filter: must match all filters
+                                                if (nAccepted < filterListsNames.length)
+                                                    accept = false;
+                                                else
+                                                    accept = true;
+                                            }
                                             if (!accept) {
                                                 // filtering by label name
                                                 // console.log('FILTER2 label filter skipping card ' + card.name);
@@ -3191,7 +3219,6 @@ function isImage(name) {
 }
 
 function loadTemplate(url) {
-
     return $.ajax({
         url: url,
         async: false,
@@ -3210,7 +3237,6 @@ function loadTemplate(url) {
             return null;
         }
     });
-
 }
 
 function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css, templateURL, bExportCustomFields) {
@@ -3238,12 +3264,28 @@ function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImag
     };
     // console.log('renderDATA:' + JSON.stringify(renderDATA));
 
+    // automatically link Digital Object Identifier numbers to their URL
+    Twig.extendFilter("linkdoi", function(value) {
+        // var pattern = /(10[.][0-9]{4,}(?:[.][0-9]+)*\/(?:(?!["&\'<>])\S)+)/g;
+        // var pattern = /(10[.][0-9]{4,}(?:[.][0-9]+)*\/(?:(?!["&\'<>])\S)+[^\s<>.'"$])/g;
+        var pattern = /[^//><](10[.][0-9]{4,}(?:[.][0-9]+)*\/(?:(?!["&\'<>])\S)+[^\s<>.'"$])/g;
+        var matches = value.match(pattern);
+        if (matches) {
+            var result = '';
+            for (var m = 0; m < matches.length; m++) {
+                result = value.replace(pattern, '<a target="_blank" href="http://doi.org/$1">$1</a>');
+            }
+            return result;
+        } else {
+            return value;
+        }
+    });
+
     loadTemplate(templateURL).then(function(sTpl) {
         var template = Twig.twig({
             data: sTpl
         });
         var htmlBody = template.render({ data: renderDATA });
-        // console.log('RENDERED: ' + htmlBody);
         var now = new Date();
         var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".html";
 
@@ -3262,8 +3304,6 @@ function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImag
     }, function(err) {
         console.error(err);
     });
-
-
 }
 
 function createOPMLExport(jsonComputedCards, bExportCustomFields) {

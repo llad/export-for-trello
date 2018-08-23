@@ -40,7 +40,7 @@
                     <div class="card">
                         <h3><a target="_blank" href="{{ theLink }}">{{ card.title }}</a></h3>        
                         <div class="description">
-                            <p class="text">{{ card.cardDescription }}</p>
+                            <p class="text">{{ card.cardDescription|linkdoi }}</p>
                         </div>
                         {% if card.jsonAttachments|length > 0 %}
                         <div class="attachments">
@@ -61,7 +61,7 @@
                             {% for comment in card.jsonComments %}
                             <div class="comment">
                                 <span class="label"><i class="far fa-comments"></i> {{ comment.date }} - {{ comment.memberCreator.fullName }}</span>
-                                <span class="text">{{ comment.text }}</span>
+                                <span class="text">{{ comment.text|linkdoi }}</span>
                             </div>
                             {% endfor %}
                         </div>

@@ -6,9 +6,16 @@ You can find it on [Chrome Web Store](https://chrome.google.com/webstore/detail/
 
 ## Support
 
-Please open issues at [Github](https://github.com/trapias/trelloExport/issues) or ask for help in the dedicated [Trello board](https://trello.com/b/MBnwUMwM/trelloexport).
+Please check [TrelloExport Wiki](https://github.com/trapias/trelloExport/wiki) for help first. If you have some problems, check the [troubleshooting guide](https://github.com/trapias/trelloExport/wiki/Troubleshooting).
+
+If you cannot find a solution, or would like some new feature to be implemented, please open issues at [Github](https://github.com/trapias/trelloExport/issues) or ask for help in the dedicated [Trello board](https://trello.com/b/MBnwUMwM/trelloexport).
 
 ## Release history
+
+### Version 1.9.59
+
+- HTML Twig: added "linkdoi" function to automatically link Digital Object Identifier (DOI) numbers to their URL, see [http://www.doi.org/](http://www.doi.org/), used in Bibliography template
+- Apply filters with AND (all must match) or OR (match any) condition, [Issue #38](https://github.com/trapias/TrelloExport/issues/38)
 
 ### Version 1.9.58
 

@@ -12,6 +12,11 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.60
+
+- added MIT License (thanks [Mathias](https://github.com/mtn-gc))
+- updated [Bridge24](https://bridge24.com/trello/?afmc=1w) adv
+
 ### Version 1.9.59
 
 - HTML Twig: added "linkdoi" function to automatically link Digital Object Identifier (DOI) numbers to their URL, see [http://www.doi.org/](http://www.doi.org/), used in Bibliography template

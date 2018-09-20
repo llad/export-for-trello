@@ -216,8 +216,11 @@
 * Whatsnew for v. 1.9.59:
     - HTML Twig: added "linkdoi" function to automatically link Digital Object Identifier (DOI) numbers to their URL, see http://www.doi.org/
     - Apply filters with AND (all must match) or OR (match any) condition (issue #38)
+* Whatsnew for v. 1.9.60:
+    - added MIT License (thanks Mathias https://github.com/mtn-gc)
+    - updated Bridge24 adv
 */
-var VERSION = '1.9.59';
+var VERSION = '1.9.60';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -723,7 +726,7 @@ function TrelloExportOptions() {
     });
 
     modal.setContent(sDialog);
-    modal.setFooterContent('<span class="sponsor half"><a target="_new" href="https://bridge24.com/trello/?afmc=1w">Need more options? Try Bridge24! <img src="https://bridge24.com/wp-content/uploads/2017/12/bridge24-logo-header_dark-grey_2x.png" /></a></span>');
+    modal.setFooterContent('<span class="sponsor"><a target="_new" href="https://bridge24.com/trello/?afmc=1w">Need interactive charts or custom reports for your cards? Try Bridge24! <img src="https://bridge24.com/wp-content/uploads/2017/12/bridge24-logo-header_dark-grey_2x.png" /></a></span>');
     modal.addFooterBtn('Close', 'tingle-btn tingle-btn--default tingle-btn--pull-right', function() {
         modal.close();
     });

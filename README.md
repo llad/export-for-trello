@@ -12,6 +12,10 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.61
+
+- fix error in markdown export [issue #56](https://github.com/trapias/TrelloExport/issues/56)
+
 ### Version 1.9.60
 
 - added MIT License (thanks [Mathias](https://github.com/mtn-gc))

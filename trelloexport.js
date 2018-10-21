@@ -219,8 +219,10 @@
 * Whatsnew for v. 1.9.60:
     - added MIT License (thanks Mathias https://github.com/mtn-gc)
     - updated Bridge24 adv
+* Whatsnew for v. 1.9.61:
+    - fix error in markdown export https://github.com/trapias/TrelloExport/issues/56
 */
-var VERSION = '1.9.60';
+var VERSION = '1.9.61';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -2122,7 +2124,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
     }).catch(
         // rejection
         function(reason) {
-            console.log('===Error=== ' + reason);
+            console.error('===Error=== ' + reason);
             $.growl.error({
                 title: "TrelloExport",
                 message: reason,
@@ -3169,7 +3171,9 @@ function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo, bchkHT
             for (i = 0; i < card.jsonComments.length; i++) {
                 var d = card.jsonComments[i].date;
                 if (d)
-                    mdOut += '**' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + ' ' + card.jsonComments[i].memberCreator.fullName + '**\n\n' + card.jsonComments[i].text + '\n\n';
+                    mdOut += '**' + d + ' ' + card.jsonComments[i].memberCreator.fullName + '**\n\n' + card.jsonComments[i].text + '\n\n';
+                else
+                    mdOut += '**' + card.jsonComments[i].memberCreator.fullName + '**\n\n' + card.jsonComments[i].text + '\n\n';
             }
         }
 

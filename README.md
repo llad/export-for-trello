@@ -12,6 +12,11 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.62
+
+- fix [issue #55](https://github.com/trapias/TrelloExport/issues/55), Export Done and Done By is missing for archived cards
+- sort labels alphabetically
+
 ### Version 1.9.61
 
 - fix error in markdown export [issue #56](https://github.com/trapias/TrelloExport/issues/56)

@@ -221,8 +221,11 @@
     - updated Bridge24 adv
 * Whatsnew for v. 1.9.61:
     - fix error in markdown export https://github.com/trapias/TrelloExport/issues/56
+* Whatsnew for v. 1.9.62:
+    - fix issue #55, Export Done and Done By is missing for archived cards
+    - sort labels alphabetically
 */
-var VERSION = '1.9.61';
+var VERSION = '1.9.62';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -338,6 +341,14 @@ function escape4XML(s) {
     s = s.replaceAll('&', '&amp;');
     s = html_encode(s);
     return s;
+}
+
+function sortByKeyDesc(array, key) {
+    return array.sort(function(a, b) {
+        var x = a[key];
+        var y = b[key];
+        return ((x > y) ? -1 : ((x < y) ? 1 : 0));
+    });
 }
 
 var $,
@@ -528,18 +539,22 @@ function getCreateCardAction(boardID, idCard) {
 }
 
 function getMoveCardAction(boardID, idCard, nameList) {
+    //console.log('getMoveCardAction ' + idCard + ' to list ' + nameList);
     for (var n = 0; n < actionsMoveCard.length; n++) {
         if (actionsMoveCard[n].board === boardID) {
             var query = Enumerable.From(actionsMoveCard[n].data)
                 .Where(function(x) {
                     if (x.data.card && x.data.listAfter) {
-                        return x.data.card.id == idCard && x.data.listAfter.name == nameList;
+                        if (x.data.card.id == idCard)
+                            return x.data.card.id == idCard && x.data.listAfter.name.toLowerCase().stringContains(nameList.trim().toLowerCase());
+                        //return x.data.card.id == idCard && x.data.listAfter.name == nameList;
                     }
                 })
                 .OrderByDescending(function(x) {
                     return x.date;
                 })
                 .ToArray();
+            console.log('query.length: ' + query.length);
             return query.length > 0 ? query[0] : false;
         }
     }
@@ -1770,6 +1785,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                     }
                                                 }
                                             });
+                                            labels.sort();
+                                            jsonLabels = sortByKeyDesc(jsonLabels, 'name');
                                             if (chkANDORFilter && filterMode === 'Label') {
                                                 // AND filter: must match all filters
                                                 if (nAccepted < filterListsNames.length)
@@ -1941,7 +1958,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                             } // default
                                             var allnameListDone = nameListDone.split(',');
                                             for (var nd = 0; nd < allnameListDone.length; nd++) {
-                                                // console.log('Done check ' + nd + ') ' + allnameListDone[nd]);
+                                                //console.log('check ' + nd + ') ' + allnameListDone[nd] + " VS memberDone " + memberDone);
                                                 if (memberDone === "") {
                                                     //Find out when the card was most recently moved to any list whose name starts with "Done" (ignore case, e.g. 'done' or 'DONE' or 'DoNe')
                                                     query = Enumerable.From(card.actions)
@@ -1955,6 +1972,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                             return x.date;
                                                         })
                                                         .ToArray();
+                                                    console.log('query.length: ' + query.length);
                                                     if (query.length > 0 && query[0].memberCreator !== undefined) {
                                                         memberDone = (query[0].memberCreator.fullName !== undefined ? query[0].memberCreator.fullName : query[0].memberCreator.username);
                                                         datetimeDone = query[0].date;

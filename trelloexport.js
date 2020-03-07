@@ -622,18 +622,7 @@ function TrelloExportOptions() {
     nProcessedBoards = 0;
     nProcessedLists = 0;
     nProcessedCards = 0;
-    var $js_btn = $('a.js-export-json'); // Export JSON link
-    var boardExportURL = $js_btn.attr('href');
-    var parts = /\/b\/(\w{8})\.json/.exec(boardExportURL); // extract board id
-    if (!parts) {
-        $.growl.error({
-            title: "TrelloExport",
-            message: "Board menu not open?",
-            fixed: true
-        });
-        return;
-    }
-    idBoard = parts[1];
+    idBoard = document.location.pathname.split('/')[2];
 
     var columnHeadings = [];
     customFields = []; // reset

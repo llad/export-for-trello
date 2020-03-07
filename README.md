@@ -19,6 +19,10 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.63
+
+- fix unshowing button on team boards (issue #65, thanks [Teemu](https://github.com/varmais)
+
 ### Version 1.9.62
 
 - fix [issue #55](https://github.com/trapias/TrelloExport/issues/55), Export Done and Done By is missing for archived cards

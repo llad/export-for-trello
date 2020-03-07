@@ -224,8 +224,10 @@
 * Whatsnew for v. 1.9.62:
     - fix issue #55, Export Done and Done By is missing for archived cards
     - sort labels alphabetically
+* Whatsnew for v. 1.9.63:
+    - fix unshowing button on team boards (issue #65, thanks https://github.com/varmais)
 */
-var VERSION = '1.9.62';
+var VERSION = '1.9.63';
 
 // TWIG templates definition
 var availableTwigTemplates = [

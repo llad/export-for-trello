@@ -226,8 +226,11 @@
     - sort labels alphabetically
 * Whatsnew for v. 1.9.63:
     - fix unshowing button on team boards (issue #65, thanks https://github.com/varmais)
+* Whatsnew for v. 1.9.64:
+    - fix some UI defects for the "export columns" dropdown 
+    - new CSV export type
 */
-var VERSION = '1.9.63';
+var VERSION = '1.9.64';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -556,7 +559,7 @@ function getMoveCardAction(boardID, idCard, nameList) {
                     return x.date;
                 })
                 .ToArray();
-            console.log('query.length: ' + query.length);
+            //console.log('query.length: ' + query.length);
             return query.length > 0 ? query[0] : false;
         }
     }
@@ -693,8 +696,8 @@ function TrelloExportOptions() {
     if (localStorage.TrelloExportCustomFields)
         customFieldsON = true;
 
-    var sDialog = '<span class="half"><h1>TrelloExport ' + VERSION + '</h1></span><span class="half blog-link"><h3><a target="_blank" href="https://github.com/trapias/TrelloExport/wiki">Help</a>&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://trapias.github.io/blog/2018/06/19/TrelloExport-1.9.53">Read the Blog!</a></h3></span><table id="optionslist">' +
-        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to:</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option></select></td></tr>' +
+    var sDialog = '<span class="half"><h1>TrelloExport ' + VERSION + '</h1></span><span class="half blog-link"><h3><a target="_blank" href="https://github.com/trapias/TrelloExport/wiki">Help</a>&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://trapias.github.io/blog/">Read the Blog!</a></h3></span><table id="optionslist">' +
+        '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Choose the type of file you want to export">Export to:</span></td><td><select id="exportmode"><option value="XLSX">Excel</option><option value="MD">Markdown</option><option value="HTML">HTML</option><option value="OPML">OPML</option><option value="CSV">CSV</option></select></td></tr>' +
         '<tr><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Check all the kinds of items you want to export">Export:</span></td><td><input type="checkbox" id="exportArchived" title="Export archived items">Archived items ' +
         '<input type="checkbox" id="comments" title="Export comments">Comments<br/><input type="checkbox" id="checklists" title="Export checklists">Checklists <input type="checkbox" id="attachments" title="Export attachments">Attachments  <input type="checkbox" id="customfields" ' + (customFieldsON ? 'checked' : '') + ' title="Export Custom Fields">Custom Fields</td></tr>' +
         '<tr id="cklAsRowsRow"><td><span data-toggle="tooltip" data-placement="right" data-container="body" title="Create one Excel row per each card, checklist item, label or card member">One row per each:</span></td><td><input type="radio" id="cardsAsRows" checked name="asrows" value="0"> <label for="cardsAsRows" >Card</label>  <input type="radio" id="cklAsRows" name="asrows" value="1"> <label for="cklAsRows">Checklist item</label>  <input type="radio" id="lblAsRows" name="asrows" value="2"> <label for="lblAsRows">Label</label>  <input type="radio" id="membersAsRows" name="asrows" value="3"> <label for="membersAsRows">Member</label>  </td></tr>' +
@@ -990,6 +993,10 @@ function TrelloExportOptions() {
                     $('#ckHTMLCardInfoRow').show();
                     // $('#renderingOptions').show();
                     break;
+                case 'CSV':
+                    $('#cklAsRowsRow').show();
+                    $('#xlsColumns').show();
+                    break;
                 default:
                     break;
             }
@@ -1017,6 +1024,10 @@ function TrelloExportOptions() {
                 case 'MD':
                     $('#ckHTMLCardInfoRow').show();
                     // $('#renderingOptions').show();
+                    break;
+                case 'CSV':
+                    $('#cklAsRowsRow').show();
+                    $('#xlsColumns').show();
                     break;
                 default:
                     break;
@@ -1963,7 +1974,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                             return x.date;
                                                         })
                                                         .ToArray();
-                                                    console.log('query.length: ' + query.length);
+                                                    //console.log('query.length: ' + query.length);
                                                     if (query.length > 0 && query[0].memberCreator !== undefined) {
                                                         memberDone = (query[0].memberCreator.fullName !== undefined ? query[0].memberCreator.fullName : query[0].memberCreator.username);
                                                         datetimeDone = query[0].date;
@@ -2104,7 +2115,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
         switch (exportFormat) {
 
             case 'XLSX':
-                createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, selectedColumns, bExportCustomFields);
+                createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, selectedColumns, bExportCustomFields, false);
                 break;
 
             case 'MD':
@@ -2117,6 +2128,11 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
             case 'OPML':
                 createOPMLExport(jsonComputedCards, bExportCustomFields);
+                break;
+
+            case 'CSV':
+                var data = createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, selectedColumns, bExportCustomFields, true);
+                createCSVExport(data, bexportArchived);
                 break;
 
             default:
@@ -2144,7 +2160,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 }
 
 // createExcelExport: export to XLSX
-function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, columnHeadings, bExportCustomFields) {
+function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, columnHeadings, bExportCustomFields, isCsv) {
     console.log('TrelloExport exporting to Excel ' + jsonComputedCards.length + ' cards...');
 
     // prepare Workbook
@@ -3074,6 +3090,11 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
     });
 
+    if (isCsv) {
+        var data = { data: w.data, archived: wArchived.data };
+        return data;
+    }
+
     var board_title = "TrelloExport";
     var ws = sheet_from_array_of_arrays(w.data);
 
@@ -3085,7 +3106,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
     //add the Archived data
     var wsArchived = sheet_from_array_of_arrays(wArchived.data);
     if (wsArchived !== undefined) {
-        wb.SheetNames.push("Archive");
+        wb.SheetNames.push("Archived");
         wb.Sheets.Archive = wsArchived;
     }
 
@@ -3227,6 +3248,62 @@ function createMarkdownExport(jsonComputedCards, bPrint, bckHTMLCardInfo, bchkHT
         message: 'Done. Downloading markdown file ' + fileName,
         fixed: false
     });
+}
+
+function createCSVExport(jsonComputedCards, bexportArchived) {
+    console.log('TrelloExport exporting to CSV ' + jsonComputedCards.data.length + ' cards...');
+    console.log('TrelloExport exporting to CSV ' + jsonComputedCards.archived.length + ' archived cards...');
+
+    var csvText = '';
+    jsonComputedCards.data.forEach(function(card) {
+        var i = 0;
+        Object.keys(card).forEach(function(c) {
+            var t = (typeof card[i] !== 'undefined' && card[i] !== null ? card[i].toString().replaceAll('\r', '') : '');
+            t = t.replaceAll('\n', '');
+            t = t.replaceAll('"', '\'');
+            if (i === Object.keys(card).length) {
+                csvText += '"' + t + '"';
+            } else {
+                csvText += '"' + t + '",';
+            }
+            i++;
+        });
+        csvText += "\r\n";
+    });
+
+    if (bexportArchived) {
+        jsonComputedCards.archived.forEach(function(card) {
+            var i = 0;
+            Object.keys(card).forEach(function(c) {
+                var t = (typeof card[i] !== 'undefined' && card[i] !== null ? card[i].toString().replaceAll('\r', '') : '');
+                t = t.replaceAll('\n', '');
+                t = t.replaceAll('"', '\'');
+                if (i === Object.keys(card).length) {
+                    csvText += '"' + t + '"';
+                } else {
+                    csvText += '"' + t + '",';
+                }
+                i++;
+            });
+            csvText += "\r\n";
+        });
+    }
+
+    var now = new Date();
+    var fileName = "TrelloExport_" + now.getFullYear() + dd(now.getMonth() + 1) + dd(now.getUTCDate()) + dd(now.getHours()) + dd(now.getMinutes()) + dd(now.getSeconds()) + ".csv";
+
+    saveAs(new Blob([csvText], {
+        type: "text/csv;charset=utf-8"
+    }), fileName);
+
+    console.log('Done exporting ' + fileName);
+
+    $.growl.notice({
+        title: "TrelloExport",
+        message: 'Done. Downloading markdown file ' + fileName,
+        fixed: false
+    });
+
 }
 
 function isImage(name) {

@@ -36,12 +36,17 @@
     text-decoration: underline;
 }
 
+.multiselect-container {
+    z-index: 1;
+}
+
 .multiselect-container.dropdown-menu {
     background: white;
     border: solid 1px #0079bf;
     height: 300px;
     overflow-y: scroll;
     display: none;
+    position: relative;
 }
 
 .blog-link {

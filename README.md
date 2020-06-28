@@ -1,6 +1,6 @@
 # TrelloExport
 
-TrelloExport is a Chrome extension to export data from Trello to Excel, Markdown, HTML (with Twig templates) and OPML.
+TrelloExport is a Chrome extension to export data from Trello to Excel, Markdown, HTML (with Twig templates) OPML and CSV.
 
 You can find it on [Chrome Web Store](https://chrome.google.com/webstore/detail/trelloexport/kmmnaeamjfdnbhljpedgfchjbkbomahp).
 
@@ -18,6 +18,11 @@ If you cannot find a solution, or would like some new feature to be implemented,
 <a href="https://www.buymeacoffee.com/trapias" target="_blank"><img src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
 
 ## Release history
+
+### Version 1.9.64
+
+- fix some UI defects for the "export columns" dropdown 
+- new CSV export type
 
 ### Version 1.9.63
 

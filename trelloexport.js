@@ -229,8 +229,10 @@
 * Whatsnew for v. 1.9.64:
     - fix some UI defects for the "export columns" dropdown 
     - new CSV export type
+* Whatsnew for v. 1.9.65:
+    - fix exporting of Archived items to Excel and CSV
 */
-var VERSION = '1.9.64';
+var VERSION = '1.9.65';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -3090,6 +3092,8 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
 
     });
 
+    //console.log('w.data: ' + w.data.length + ', wArchived.data: ' + wArchived.data.length);
+
     if (isCsv) {
         var data = { data: w.data, archived: wArchived.data };
         return data;
@@ -3107,7 +3111,8 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
     var wsArchived = sheet_from_array_of_arrays(wArchived.data);
     if (wsArchived !== undefined) {
         wb.SheetNames.push("Archived");
-        wb.Sheets.Archive = wsArchived;
+        console.log("Added sheet Archived");
+        wb.Sheets.Archived = wsArchived;
     }
 
     var now = new Date();

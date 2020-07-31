@@ -19,6 +19,10 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.65
+
+- fix exporting of Archived items to Excel and CSV
+  
 ### Version 1.9.64
 
 - fix some UI defects for the "export columns" dropdown 

@@ -19,6 +19,10 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.66
+
+- Added the dueComplete (bool) field to exported columns
+
 ### Version 1.9.65
 
 - fix exporting of Archived items to Excel and CSV

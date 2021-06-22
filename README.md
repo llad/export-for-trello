@@ -19,6 +19,10 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.67
+
+- Added the HTTP header "x-trello-user-agent-extension" to all AJAX calls to Trello, trying to find a solution for https://github.com/trapias/TrelloExport/issues/81
+
 ### Version 1.9.66
 
 - Added the dueComplete (bool) field to exported columns

@@ -233,8 +233,10 @@
     - fix exporting of Archived items to Excel and CSV
 * Whatsnew for v. 1.9.66:
     - added dueComplete field to exported columns
+* Whatsnew for v. 1.9.67:
+    - added header x-trello-user-agent-extension to all AJAX calls to Trello, trying to find a solution for https://github.com/trapias/TrelloExport/issues/81
 */
-var VERSION = '1.9.66';
+var VERSION = '1.9.67';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -250,6 +252,7 @@ function loadTemplateSetFromURL(sUrl) {
         return availableTwigTemplates;
     // console.log('loadTemplateSetFromURL:' + sUrl);
     return $.ajax({
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
         url: sUrl,
         async: false,
         method: 'GET',
@@ -481,6 +484,7 @@ function getCommentCardActions(boardID, idCard) {
         }
     }
     $.ajax({
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
         url: 'https://trello.com/1/card/' + idCard + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit,
         // url:'https://trello.com/1/boards/' + boardID + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit,
         dataType: 'json',
@@ -527,6 +531,7 @@ function getCreateCardAction(boardID, idCard) {
         }
     }
     $.ajax({
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
         url: 'https://trello.com/1/boards/' + boardID + '/actions?filter=createCard&limit=' + dataLimit,
         dataType: 'json',
         async: false,
@@ -577,6 +582,7 @@ function getMoveCardAction(boardID, idCard, nameList) {
         }
     }
     $.ajax({
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
         url: 'https://trello.com/1/boards/' + boardID + '/actions?filter=updateCard&limit=' + dataLimit,
         dataType: 'json',
         async: false,
@@ -1177,6 +1183,7 @@ function setColumnHeadings(asrowsMode) {
 // append custom fields to column headings
 function loadCustomFields(columnHeadings) {
     $.ajax({
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
         url: 'https://trello.com/1/boards/' + idBoard + '/customfields',
         dataType: 'json',
         async: false,
@@ -1196,6 +1203,7 @@ function loadCardCustomFields(cardID) {
     var rc = [];
 
     $.ajax({
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
         url: 'https://trello.com/1/cards/' + cardID + '/customFieldItems',
         dataType: 'json',
         async: false,
@@ -1267,6 +1275,7 @@ function getalllistsinboard() {
     var bexportArchived = $('#exportArchived').is(':checked');
 
     $.ajax({
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
             url: apiURL,
             async: false,
         })
@@ -1307,6 +1316,7 @@ function getorganizations() {
     var orgID = []; //[{ id: null, displayName: 'Private Boards' }];
 
     $.ajax({
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
             url: apiURL,
             async: false,
         })
@@ -1337,6 +1347,7 @@ function getorganizationid() {
     var orgID = "";
 
     $.ajax({
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
             url: apiURL,
             async: false,
         })
@@ -1376,6 +1387,7 @@ function getallboards() {
         }
 
         $.ajax({
+                headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
                 url: apiURL,
                 async: false,
             })
@@ -1427,6 +1439,7 @@ function getBoardData(id) {
     var bData = "";
 
     $.ajax({
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
             url: apiURL,
             async: false,
         })
@@ -1454,6 +1467,7 @@ function getallcardsinlist(listid) {
     var sHtml = "";
 
     $.ajax({
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
             url: apiURL,
             async: false,
         })
@@ -1558,6 +1572,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
             var apiURL = "https://trello.com/1/boards/" + idBoard + "/lists?fields=name,closed"; //"?lists=all&cards=all&card_fields=all&card_checklists=all&members=all&member_fields=all&membersInvited=all&checklists=all&organization=true&organization_fields=all&fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&card_attachments=true";
             $.ajax({
+                    headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
                     url: apiURL,
                     async: false,
                 })
@@ -1633,6 +1648,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                             readCards = 0;
 
                             $.ajax({
+                                    headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
                                     url: 'https://trello.com/1/lists/' + list_id + '/cards?limit=' + pageSize + '&filter=all&fields=all&checklists=all&members=true&member_fields=all&membersInvited=all&organization=true&organization_fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&attachments=true' + "&before=" + sBefore,
                                     async: false,
                                 })
@@ -3349,6 +3365,7 @@ function isImage(name) {
 
 function loadTemplate(url) {
     return $.ajax({
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
         url: url,
         async: false,
         method: 'GET',

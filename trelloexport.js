@@ -235,8 +235,11 @@
     - added dueComplete field to exported columns
 * Whatsnew for v. 1.9.67:
     - added header x-trello-user-agent-extension to all AJAX calls to Trello, trying to find a solution for https://github.com/trapias/TrelloExport/issues/81
+* Whatsnew for v. 1.9.68:
+    - avoid duplicate header row before archived cards in CSV export (issue #76)
+    - export the cards "start" field (issue #84)
 */
-var VERSION = '1.9.67';
+var VERSION = '1.9.68';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -1106,7 +1109,7 @@ function setColumnHeadings(asrowsMode) {
                 'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
                 'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due', 
-                'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels', 'Due Complete'
+                'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels', 'Due Complete', 'Start'
             ];
             break;
         case 2: // label
@@ -1115,7 +1118,7 @@ function setColumnHeadings(asrowsMode) {
                 'Total Checklist items', 'Completed Checklist items', 'Checklists',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
                 'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
-                'Done', 'DoneBy', 'DoneTime', 'Members', 'Label', 'Due Complete'
+                'Done', 'DoneBy', 'DoneTime', 'Members', 'Label', 'Due Complete', 'Start'
             ];
             break;
         case 3: // member
@@ -1124,7 +1127,7 @@ function setColumnHeadings(asrowsMode) {
                 'Total Checklist items', 'Completed Checklist items', 'Checklists',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
                 'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
-                'Done', 'DoneBy', 'DoneTime', 'Member', 'Labels', 'Due Complete'
+                'Done', 'DoneBy', 'DoneTime', 'Member', 'Labels', 'Due Complete', 'Start'
             ];
             break;
         default:
@@ -1134,7 +1137,7 @@ function setColumnHeadings(asrowsMode) {
                 'Total Checklist items', 'Completed Checklist items', 'Checklists',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
                 'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due',
-                'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels', 'Due Complete'
+                'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels', 'Due Complete', 'Start'
             ];
             break;
     }
@@ -2069,6 +2072,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 'memberCreator': memberCreator,
                                                 'LastActivity': dateLastActivity.toLocaleDateString() + ' ' + dateLastActivity.toLocaleTimeString(),
                                                 //'due': (card.due ? new Date(card.due).toLocaleDateString() + ' ' + new Date(card.due).toLocaleTimeString() : ''),
+                                                'start': (card.start ? new Date(card.start) : ''),
                                                 'due': (card.due ? new Date(card.due) : ''),
                                                 'dueComplete': card.dueComplete,
                                                 'datetimeDone': datetimeDone,
@@ -2197,8 +2201,11 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
     wArchived = {};
     wArchived.name = 'Archived lists and cards';
     wArchived.data = [];
-    wArchived.data.push([]);
-    wArchived.data[0] = columnHeadings;
+
+    if(!isCsv) {
+        wArchived.data.push([]);
+        wArchived.data[0] = columnHeadings;    
+    }
 
     // Setup the active list and cart worksheet
     w = {};
@@ -2226,6 +2233,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                 }
             });
         });
+
         // iExcelItemsAsRows: 
         // 0=default
         // 1=checklist items as rows
@@ -2237,6 +2245,8 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                 toStringArray = [];
                 // filter columns
                 for (var nCol = 0; nCol < allColumns.length; nCol++) {
+                    //  var posInArray = $.inArray(allColumns[nCol].value, columnHeadings);
+                    //  console.log('nCol ' + nCol + ', posInArray ' + posInArray + ' allColumns[nCol].value ' + allColumns[nCol].value);
                     if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
 
                         switch (nCol) {
@@ -2323,6 +2333,9 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                 break;
                             case 27:
                                 toStringArray.push(card.dueComplete);
+                                break;
+                            case 28:
+                                toStringArray.push((card.start ? new Date(card.start).toLocaleDateString() + ' ' + new Date(card.start).toLocaleTimeString() : ''));
                                 break;
                             default:
                                 // custom fields
@@ -2468,6 +2481,9 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         case 31:
                                             toStringArray.push(card.dueComplete);
                                             break;
+                                        case 32:
+                                            toStringArray.push((card.start ? new Date(card.start).toLocaleDateString() + ' ' + new Date(card.start).toLocaleTimeString() : ''));
+                                            break;
                                         default:
                                             // custom fields
                                             if (bExportCustomFields) {
@@ -2600,6 +2616,9 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                 case 31:
                                     toStringArray.push(card.dueComplete);
                                     break;
+                                case 32:
+                                    toStringArray.push((card.start ? new Date(card.start).toLocaleDateString() + ' ' + new Date(card.start).toLocaleTimeString() : ''));
+                                    break;
                                 default:
                                     // custom fields
                                     if (bExportCustomFields) {
@@ -2720,8 +2739,11 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         toStringArray.push(lbl);
                                         break;
                                     case 27:
-                                    toStringArray.push(card.dueComplete);
-                                    break;
+                                        toStringArray.push(card.dueComplete);
+                                        break;
+                                    case 28:
+                                        toStringArray.push((card.start ? new Date(card.start).toLocaleDateString() + ' ' + new Date(card.start).toLocaleTimeString() : ''));
+                                        break;
                                     default:
                                         // custom fields
                                         if (bExportCustomFields) {
@@ -2853,6 +2875,9 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                 case 31:
                                     toStringArray.push(card.dueComplete);
                                     break;
+                                case 32:
+                                    toStringArray.push((card.start ? new Date(card.start).toLocaleDateString() + ' ' + new Date(card.start).toLocaleTimeString() : ''));
+                                    break;
                                 default:
                                     // custom fields
                                     if (bExportCustomFields) {
@@ -2974,6 +2999,9 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                         break;
                                     case 27:
                                         toStringArray.push(card.dueComplete);
+                                        break;
+                                    case 28:
+                                        toStringArray.push((card.start ? new Date(card.start).toLocaleDateString() + ' ' + new Date(card.start).toLocaleTimeString() : ''));
                                         break;
                                     default:
                                         // custom fields
@@ -3105,6 +3133,9 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                     break;
                                 case 31:
                                     toStringArray.push(card.dueComplete);
+                                    break;
+                                case 32:
+                                    toStringArray.push((card.start ? new Date(card.start).toLocaleDateString() + ' ' + new Date(card.start).toLocaleTimeString() : ''));
                                     break;
                                 default:
                                     // custom fields

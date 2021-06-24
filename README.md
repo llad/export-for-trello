@@ -19,6 +19,11 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.68:
+
+- avoid duplicate header row before archived cards in CSV export (issue #76)
+- export the cards "start" field (issue #84)
+
 ### Version 1.9.67
 
 - Added the HTTP header "x-trello-user-agent-extension" to all AJAX calls to Trello, trying to find a solution for https://github.com/trapias/TrelloExport/issues/81

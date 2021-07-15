@@ -238,8 +238,10 @@
 * Whatsnew for v. 1.9.68:
     - avoid duplicate header row before archived cards in CSV export (issue #76)
     - export the cards "start" field (issue #84)
+* Whatsnew for v. 1.9.69:
+    - bugfix columns handling in loading data #74
 */
-var VERSION = '1.9.68';
+var VERSION = '1.9.69';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -255,7 +257,7 @@ function loadTemplateSetFromURL(sUrl) {
         return availableTwigTemplates;
     // console.log('loadTemplateSetFromURL:' + sUrl);
     return $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
         url: sUrl,
         async: false,
         method: 'GET',
@@ -388,6 +390,7 @@ var $,
     filterListsNames = [],
     pageSize = 300, // cfr https://trello.com/c/8MJOLSCs/10-limit-actions-for-cards-requests
     customFields = [];
+    var allColumns = null;
 
 function sheet_from_array_of_arrays(data, opts) {
     var ws = {};
@@ -487,7 +490,7 @@ function getCommentCardActions(boardID, idCard) {
         }
     }
     $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
         url: 'https://trello.com/1/card/' + idCard + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit,
         // url:'https://trello.com/1/boards/' + boardID + '/actions?filter=commentCard,copyCommentCard&limit=' + dataLimit,
         dataType: 'json',
@@ -534,7 +537,7 @@ function getCreateCardAction(boardID, idCard) {
         }
     }
     $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
         url: 'https://trello.com/1/boards/' + boardID + '/actions?filter=createCard&limit=' + dataLimit,
         dataType: 'json',
         async: false,
@@ -585,7 +588,7 @@ function getMoveCardAction(boardID, idCard, nameList) {
         }
     }
     $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
         url: 'https://trello.com/1/boards/' + boardID + '/actions?filter=updateCard&limit=' + dataLimit,
         dataType: 'json',
         async: false,
@@ -763,6 +766,7 @@ function TrelloExportOptions() {
     modal.addFooterBtn('Close', 'tingle-btn tingle-btn--default tingle-btn--pull-right', function() {
         modal.close();
     });
+
     modal.addFooterBtn('Export', 'tingle-btn tingle-btn--trelloexport tingle-btn--pull-right', function() {
         var mode = $('#exportmode').val();
         localStorage.TrelloExportMode = mode;
@@ -841,8 +845,11 @@ function TrelloExportOptions() {
                 break;
         }
 
-        var allColumns = $('#selectedColumns option');
-        // console.log('allColumns = ' + JSON.stringify(allColumns));
+        if(allColumns === null) {
+            allColumns = $('#selectedColumns option');
+        }
+        //var allColumns = $('#selectedColumns option');
+        //console.log('allColumns = ' + JSON.stringify(allColumns));
         var selectedColumns = [];
         var selectedOptions = $('#selectedColumns option:selected');
         selectedOptions.each(function() {
@@ -1186,7 +1193,7 @@ function setColumnHeadings(asrowsMode) {
 // append custom fields to column headings
 function loadCustomFields(columnHeadings) {
     $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
         url: 'https://trello.com/1/boards/' + idBoard + '/customfields',
         dataType: 'json',
         async: false,
@@ -1206,7 +1213,7 @@ function loadCardCustomFields(cardID) {
     var rc = [];
 
     $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
         url: 'https://trello.com/1/cards/' + cardID + '/customFieldItems',
         dataType: 'json',
         async: false,
@@ -1278,7 +1285,7 @@ function getalllistsinboard() {
     var bexportArchived = $('#exportArchived').is(':checked');
 
     $.ajax({
-            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
             url: apiURL,
             async: false,
         })
@@ -1319,7 +1326,7 @@ function getorganizations() {
     var orgID = []; //[{ id: null, displayName: 'Private Boards' }];
 
     $.ajax({
-            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
             url: apiURL,
             async: false,
         })
@@ -1350,7 +1357,7 @@ function getorganizationid() {
     var orgID = "";
 
     $.ajax({
-            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
             url: apiURL,
             async: false,
         })
@@ -1390,7 +1397,7 @@ function getallboards() {
         }
 
         $.ajax({
-                headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+                headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
                 url: apiURL,
                 async: false,
             })
@@ -1442,7 +1449,7 @@ function getBoardData(id) {
     var bData = "";
 
     $.ajax({
-            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
             url: apiURL,
             async: false,
         })
@@ -1470,7 +1477,7 @@ function getallcardsinlist(listid) {
     var sHtml = "";
 
     $.ajax({
-            headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+            headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
             url: apiURL,
             async: false,
         })
@@ -1520,7 +1527,7 @@ function extractFloat(str, regex, groupIndex) {
 }
 
 function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL, chkANDORFilter) {
-    console.log('TrelloExport loading data, export format: ' + exportFormat + '...');
+    console.log('TrelloExport loading data, export format: ' + exportFormat + '... selectedColumns ' + selectedColumns.length + ' allColumns ' + allColumns.length);
     var converter = new showdown.Converter();
     var promLoadData = new Promise(
         function(resolve, reject) {
@@ -1575,7 +1582,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
             var apiURL = "https://trello.com/1/boards/" + idBoard + "/lists?fields=name,closed"; //"?lists=all&cards=all&card_fields=all&card_checklists=all&members=all&member_fields=all&membersInvited=all&checklists=all&organization=true&organization_fields=all&fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&card_attachments=true";
             $.ajax({
-                    headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+                    headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
                     url: apiURL,
                     async: false,
                 })
@@ -1651,7 +1658,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                             readCards = 0;
 
                             $.ajax({
-                                    headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+                                    headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
                                     url: 'https://trello.com/1/lists/' + list_id + '/cards?limit=' + pageSize + '&filter=all&fields=all&checklists=all&members=true&member_fields=all&membersInvited=all&organization=true&organization_fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&attachments=true' + "&before=" + sBefore,
                                     async: false,
                                 })
@@ -2194,7 +2201,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
 // createExcelExport: export to XLSX
 function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, columnHeadings, bExportCustomFields, isCsv) {
-    console.log('TrelloExport exporting to Excel ' + jsonComputedCards.length + ' cards...');
+    console.log('TrelloExport exporting to Excel ' + jsonComputedCards.length + ' cards... columnHeadings ' + columnHeadings.length  + ' allColumns ' + allColumns.length);
 
     // prepare Workbook
     var wb = new Workbook();
@@ -2248,6 +2255,8 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                     //  var posInArray = $.inArray(allColumns[nCol].value, columnHeadings);
                     //  console.log('nCol ' + nCol + ', posInArray ' + posInArray + ' allColumns[nCol].value ' + allColumns[nCol].value);
                     if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                        //console.log('nCol ' + nCol + ' allColumns[nCol].value ' + allColumns[nCol].value + ' 1');
 
                         switch (nCol) {
                             case 0:
@@ -2384,6 +2393,8 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                             for (var nCol = 0; nCol < allColumns.length; nCol++) {
                                 if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
 
+                                    //console.log('nCol ' + nCol + ' allColumns[nCol].value ' + allColumns[nCol].value + ' 2');
+
                                     switch (nCol) {
                                         case 0:
                                             toStringArray.push(card.organizationName);
@@ -2518,6 +2529,8 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                     // filter columns
                     for (nCol = 0; nCol < allColumns.length; nCol++) {
                         if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
+
+                            //console.log('nCol ' + nCol + ' allColumns[nCol].value ' + allColumns[nCol].value + ' 3');
 
                             switch (nCol) {
                                 case 0:
@@ -2656,6 +2669,8 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                         for (var nCol = 0; nCol < allColumns.length; nCol++) {
                             if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
 
+                                //console.log('nCol ' + nCol + ' allColumns[nCol].value ' + allColumns[nCol].value + ' 4');
+
                                 switch (nCol) {
                                     case 0:
                                         toStringArray.push(card.organizationName);
@@ -2778,6 +2793,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                     for (nCol = 0; nCol < allColumns.length; nCol++) {
                         if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
 
+                            //console.log('nCol ' + nCol + ' allColumns[nCol].value ' + allColumns[nCol].value + ' 5');
                             switch (nCol) {
                                 case 0:
                                     toStringArray.push(card.organizationName);
@@ -2915,6 +2931,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                         for (var nCol = 0; nCol < allColumns.length; nCol++) {
                             if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
 
+                                //console.log('nCol ' + nCol + ' allColumns[nCol].value ' + allColumns[nCol].value + ' 6');
                                 switch (nCol) {
                                     case 0:
                                         toStringArray.push(card.organizationName);
@@ -3037,6 +3054,7 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                     for (nCol = 0; nCol < allColumns.length; nCol++) {
                         if ($.inArray(allColumns[nCol].value, columnHeadings) > -1) {
 
+                            //console.log('nCol ' + nCol + ' allColumns[nCol].value ' + allColumns[nCol].value + ' 7');
                             switch (nCol) {
                                 case 0:
                                     toStringArray.push(card.organizationName);
@@ -3396,7 +3414,7 @@ function isImage(name) {
 
 function loadTemplate(url) {
     return $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
         url: url,
         async: false,
         method: 'GET',

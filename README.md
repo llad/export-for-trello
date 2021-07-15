@@ -19,6 +19,10 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.69:
+
+- bugfix columns handling in loading data (issue #74)
+
 ### Version 1.9.68:
 
 - avoid duplicate header row before archived cards in CSV export (issue #76)

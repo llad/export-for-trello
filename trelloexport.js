@@ -240,8 +240,10 @@
     - export the cards "start" field (issue #84)
 * Whatsnew for v. 1.9.69:
     - bugfix columns handling in loading data #74
+* Whatsnew for v. 1.9.70:
+    - Load Trello Plus Spent/Estimate in comments
 */
-var VERSION = '1.9.69';
+var VERSION = '1.9.70';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -252,6 +254,13 @@ var availableTwigTemplates = [
 ];
 var localTwigTemplates = availableTwigTemplates;
 
+function setOrigin(xhr)
+{
+    //xhr.setRequestHeader('Content-type', 'application/jsonp');
+    //xhr.setRequestHeader('Origin', 'trello.com');
+    //xhr.setRequestHeader('Origin:', 'https://trello.com/');
+}
+
 function loadTemplateSetFromURL(sUrl) {
     if (!sUrl)
         return availableTwigTemplates;
@@ -261,6 +270,11 @@ function loadTemplateSetFromURL(sUrl) {
         url: sUrl,
         async: false,
         method: 'GET',
+        // crossDomain: true,
+        // beforeSend: setOrigin,
+         xhrFields: {
+            withCredentials: true
+        },
         done: function(sJSonSet) {
             // console.log('template set loaded: ' + sJSonSet);
             return sJSonSet;
@@ -1549,7 +1563,8 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
         var jsonComputedCards = [];
 
         // RegEx to find the Trello Plus Spent and Estimate (spent/estimate) in card titles
-        var SpentEstRegex = /(\(([0-9]+(\.[0-9]+)?)(\/?([0-9]+(\.[0-9]+)?))?\))/;
+        //var SpentEstRegex = /(\(([0-9]+(\.[0-9]+)?)(\/?([0-9]+(\.[0-9]+)?))?\))/;
+        var SpentEstRegex = new RegExp("([0-9]*((\.[0-9]+))?)/([0-9]*(?:(\.[0-9]+))?)");
         var PointsEstRegex = /(\(([0-9]+(\.[0-9]+)?)\))/;
         var PointsConRegex = /(\[([0-9]+(\.[0-9]+)?)\])/;
 
@@ -1744,21 +1759,31 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 jsonAttachments = [];
 
                                             // Trello Plus Spent/Estimate
-                                            spent = extractFloat(title, SpentEstRegex, 2);
-                                            if (isNaN(spent))
-                                                spent = 0;
+                                            if(title.match(SpentEstRegex)){
+                                                    var m = title.match(SpentEstRegex);
+                                                    var cspent = m[1];
+                                                    var cestimate = m[4];
+                                                //   console.log("SPENT: " + cspent + " EST: " + cestimate);
+                                                    spent += Number(cspent);
+                                                    estimate += Number(cestimate);
+                                                //   console.log("TOTAL SPENT: " + spent + " EST: " + estimate);
+                                            }
+                                            
+                                            // spent = extractFloat(title, SpentEstRegex, 2);
+                                            // if (typeof spent !== 'number' || isNaN(spent))
+                                            //     spent = 0;        
 
-                                            estimate = extractFloat(title, SpentEstRegex, 5);
-                                            if (isNaN(estimate))
-                                                estimate = 0;
+                                            // estimate = extractFloat(title, SpentEstRegex, 3);
+                                            // if (typeof estimate !== 'number' || isNaN(estimate))
+                                            //     estimate = 0;
 
                                             // Scrum for Trello Points Estimate/Consumed
                                             points_estimate = extractFloat(title, PointsEstRegex, 2);
-                                            if (isNaN(points_estimate))
+                                            if (typeof points_estimate !== 'number' || isNaN(points_estimate))
                                                 points_estimate = 0;
 
                                             points_consumed = extractFloat(title, PointsConRegex, 2);
-                                            if (isNaN(points_consumed))
+                                            if (typeof points_consumed !== 'number' || isNaN(points_consumed))
                                                 points_consumed = 0;
 
                                             // Clean-up title
@@ -1918,6 +1943,18 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 if (d)
                                                                     jsonComment.date = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                                                                 jsonComment.text = action.data.text;
+
+                                                                // Trello Plus Spent/Estimate in comments
+                                                                if(jsonComment.text.match(SpentEstRegex)){
+                                                                     var m = jsonComment.text.match(SpentEstRegex);
+                                                                     var cspent = m[1];
+                                                                     var cestimate = m[4];
+                                                                    //   console.log("SPENT: " + cspent + " EST: " + cestimate);
+                                                                      spent += Number(cspent);
+                                                                      estimate += Number(cestimate);
+                                                                    //   console.log("TOTAL SPENT: " + spent + " EST: " + estimate);
+                                                                }
+
                                                                 if (exportFormat === 'HTML') {
                                                                     jsonComment.text = converter.makeHtml(html_encode(jsonComment.text));
                                                                 }

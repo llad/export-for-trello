@@ -19,6 +19,9 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.70:
+- Load Trello Plus Spent/Estimate in comments
+
 ### Version 1.9.69:
 
 - bugfix columns handling in loading data (issue #74)

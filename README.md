@@ -19,6 +19,10 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.71:
+- Manifest v3
+- checklist items' due date, assignee and status added to checklists' mode excel export
+
 ### Version 1.9.70:
 - Load Trello Plus Spent/Estimate in comments
 

@@ -242,15 +242,18 @@
     - bugfix columns handling in loading data #74
 * Whatsnew for v. 1.9.70:
     - Load Trello Plus Spent/Estimate in comments
+* Whatsnew for v. 1.9.71:
+    - manifest v3
+    - checklist items' due date, assignee and status added to checklists' mode excel export
 */
-var VERSION = '1.9.70';
+var VERSION = '1.9.71';
 
 // TWIG templates definition
 var availableTwigTemplates = [
-    { name: 'html', url: chrome.extension.getURL('/templates/html.twig'), description: 'Default HTML' },
-    { name: 'bibliography', url: chrome.extension.getURL('/templates/bibliography.twig'), description: 'Bibliography HTML', css: chrome.extension.getURL('/templates/bibliography.css'), },
-    { name: 'newsletter', url: chrome.extension.getURL('/templates/newsletter.twig'), description: 'Newsletter with buttons HTML', css: chrome.extension.getURL('/templates/newsletter.css'), },
-    { name: 'newsletter2', url: chrome.extension.getURL('/templates/newsletter2.twig'), description: 'Newsletter with links HTML', css: chrome.extension.getURL('/templates/newsletter.css'), }
+    { name: 'html', url: chrome.runtime.getURL('/templates/html.twig'), description: 'Default HTML' },
+    { name: 'bibliography', url: chrome.runtime.getURL('/templates/bibliography.twig'), description: 'Bibliography HTML', css: chrome.runtime.getURL('/templates/bibliography.css'), },
+    { name: 'newsletter', url: chrome.runtime.getURL('/templates/newsletter.twig'), description: 'Newsletter with buttons HTML', css: chrome.runtime.getURL('/templates/newsletter.css'), },
+    { name: 'newsletter2', url: chrome.runtime.getURL('/templates/newsletter2.twig'), description: 'Newsletter with links HTML', css: chrome.runtime.getURL('/templates/newsletter.css'), }
 ];
 var localTwigTemplates = availableTwigTemplates;
 
@@ -688,7 +691,7 @@ function TrelloExportOptions() {
         options.push(o);
     }
 
-    var theCSS = chrome.extension.getURL('/templates/default.css') || 'https://trapias.github.io/assets/TrelloExport/default.css';
+    var theCSS = chrome.runtime.getURL('/templates/default.css') || 'https://trapias.github.io/assets/TrelloExport/default.css';
     if (localStorage.TrelloExportCSS && !localStorage.TrelloExportCSS.startsWith('chrome'))
         theCSS = localStorage.TrelloExportCSS;
 
@@ -704,7 +707,7 @@ function TrelloExportOptions() {
     if (localStorage.TrelloExportType)
         selectedType = localStorage.TrelloExportType;
 
-    var twigTemplate = chrome.extension.getURL('/templates/html.twig');
+    var twigTemplate = chrome.runtime.getURL('/templates/html.twig');
     if (localStorage.TrelloExportTwigTemplate)
         twigTemplate = localStorage.TrelloExportTwigTemplate;
 
@@ -1130,7 +1133,7 @@ function setColumnHeadings(asrowsMode) {
                 'Checklist item', 'Completed', 'DateCompleted', 'CompletedBy',
                 'NumberOfComments', 'Comments', 'Attachments', 'Votes', 'Spent', 'Estimate',
                 'Points Estimate', 'Points Consumed', 'Created', 'CreatedBy', 'LastActivity', 'Due', 
-                'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels', 'Due Complete', 'Start'
+                'Done', 'DoneBy', 'DoneTime', 'Members', 'Labels', 'Due Complete', 'Start', 'Checklist item Due', 'Checklist item idMember', 'Checklist item Member', 'Checklist item State'
             ];
             break;
         case 2: // label
@@ -1540,6 +1543,34 @@ function extractFloat(str, regex, groupIndex) {
     return value;
 }
 
+function getMember(id) {
+    var apiURL = "https://trello.com/1/members/" + id;
+    var bData = "";
+
+    $.ajax({
+        headers: { 'x-trello-user-agent-extension': 'TrelloExport' },
+        url: apiURL,
+        async: false,
+    })
+        .done(function (data) {
+            bData = data;
+            // console.log(JSON.stringify(data));
+        })
+        .fail(function (jqXHR, textStatus, errorThrown) {
+            console.error("getMember error: " + textStatus);
+            $.growl.error({
+                title: "TrelloExport",
+                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
+                fixed: true
+            });
+        })
+        .always(function () {
+            // console.log("complete");
+        });
+
+    return bData;
+}
+
 function loadData(exportFormat, bexportArchived, bExportComments, bExportChecklists, bExportAttachments, iExcelItemsAsRows, bckHTMLCardInfo, bchkHTMLInlineImages, allColumns, selectedColumns, css, filterMode, bExportCustomFields, templateURL, chkANDORFilter) {
     console.log('TrelloExport loading data, export format: ' + exportFormat + '... selectedColumns ' + selectedColumns.length + ' allColumns ' + allColumns.length);
     var converter = new showdown.Converter();
@@ -1882,6 +1913,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                 $.each(checklists, function(i, checklistid) {
                                                     // console.log('PARSE ' + checklistid);
                                                     $.each(card.checklists, function(key, list) {
+                                                        // console.log('list: ' + JSON.stringify(list));
                                                         var list_id = list.id;
                                                         if (list_id == checklistid) {
                                                             var jsonCheckList = {};
@@ -1899,6 +1931,19 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                                                 if (item) {
                                                                     var cItem = {};
                                                                     cItem.name = item.name;
+                                                                    cItem.due = item.due;
+                                                                    cItem.state = item.state;
+                                                                    cItem.idMember = item.idMember;
+                                                                    if(item.idMember !== null){
+                                                                        var m = getMember(item.idMember);
+                                                                        if(m !== null){
+                                                                            cItem.memberInitials = m.fullName;
+                                                                        }
+                                                                    }
+                                                                    else {
+                                                                        cItem.memberInitials = '';
+                                                                    }
+                                                                    
                                                                     if (exportFormat === 'HTML') {
                                                                         cItem.name = html_encode(cItem.name);
                                                                     }
@@ -2531,6 +2576,18 @@ function createExcelExport(jsonComputedCards, iExcelItemsAsRows, allColumns, col
                                             break;
                                         case 32:
                                             toStringArray.push((card.start ? new Date(card.start).toLocaleDateString() + ' ' + new Date(card.start).toLocaleTimeString() : ''));
+                                            break;
+                                        case 33:
+                                            toStringArray.push(it.due);
+                                            break;
+                                        case 34:
+                                            toStringArray.push(it.idMember);
+                                            break;
+                                        case 35:
+                                            toStringArray.push(it.memberInitials);
+                                            break;
+                                        case 36:
+                                            toStringArray.push(it.state);
                                             break;
                                         default:
                                             // custom fields
@@ -3455,6 +3512,9 @@ function loadTemplate(url) {
         url: url,
         async: false,
         method: 'GET',
+        xhrFields: {
+            withCredentials: true
+        },
         done: function(sTwig) {
             console.log('template loaded: ' + sTwig);
             return sTwig;
@@ -3474,7 +3534,7 @@ function loadTemplate(url) {
 function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImages, css, templateURL, bExportCustomFields) {
 
     if (!templateURL) {
-        templateURL = chrome.extension.getURL('/templates/html.twig');
+        templateURL = chrome.runtime.getURL('/templates/html.twig');
         console.log('using default templateURL: ' + templateURL);
     } else {
         // get css from availableTwigTemplates
@@ -3486,7 +3546,7 @@ function createHTMLExport(jsonComputedCards, bckHTMLCardInfo, bchkHTMLInlineImag
     }
 
     if (css === undefined || css === '' || css === null) {
-        css = chrome.extension.getURL('/templates/default.css'); // 'https://trapias.github.io/assets/TrelloExport/default.css';
+        css = chrome.runtime.getURL('/templates/default.css'); // 'https://trapias.github.io/assets/TrelloExport/default.css';
     }
     console.log('createHTMLExport css: ' + css + ', templateURL: ' + templateURL);
 

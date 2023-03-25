@@ -245,8 +245,10 @@
 * Whatsnew for v. 1.9.71:
     - manifest v3
     - checklist items' due date, assignee and status added to checklists' mode excel export
+* Whatsnew for v. 1.9.72:
+    - finally restored the capability to load templates from external URLs, issues #86 and #87
 */
-var VERSION = '1.9.71';
+var VERSION = '1.9.72';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -257,40 +259,41 @@ var availableTwigTemplates = [
 ];
 var localTwigTemplates = availableTwigTemplates;
 
-function setOrigin(xhr)
-{
-    //xhr.setRequestHeader('Content-type', 'application/jsonp');
-    //xhr.setRequestHeader('Origin', 'trello.com');
-    //xhr.setRequestHeader('Origin:', 'https://trello.com/');
-}
-
 function loadTemplateSetFromURL(sUrl) {
-    if (!sUrl)
-        return availableTwigTemplates;
-    // console.log('loadTemplateSetFromURL:' + sUrl);
-    return $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
-        url: sUrl,
-        async: false,
-        method: 'GET',
-        // crossDomain: true,
-        // beforeSend: setOrigin,
-         xhrFields: {
-            withCredentials: true
-        },
-        done: function(sJSonSet) {
-            // console.log('template set loaded: ' + sJSonSet);
-            return sJSonSet;
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.error(jqXHR.statusText);
-            $.growl.error({
-                title: "TrelloExport",
-                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
-                fixed: true
+    console.log('loadTemplateSetFromURL:' + sUrl);
+    return new Promise(function (resolve, reject) {
+
+        if (!sUrl)
+            resolve(availableTwigTemplates);
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", sUrl, true);
+        xhr.onload = function () {
+            if (xhr.status == 200) {
+                // console.log('template set loaded: ' + JSON.parse(xhr.response));
+                // return xhr.response;
+                resolve(xhr.response);
+            }
+            else {
+                reject({
+                    status: xhr.status,
+                    statusText: xhr.statusText
+                });
+            }
+        };
+        xhr.onerror = function () {
+            // Crossdomain request denied
+            if (xhr.status === 0) {
+                console.error(xhr.response)
+            }
+            reject({
+                status: xhr.status,
+                statusText: xhr.statusText
             });
-            return null;
-        }
+        };
+        xhr.crossDomain = true;
+        xhr.withCredentials = false;
+        xhr.send();
     });
 }
 
@@ -717,7 +720,8 @@ function TrelloExportOptions() {
         templateSetURL = localStorage.TrelloExportTwigTemplatesURL;
 
         loadTemplateSetFromURL(templateSetURL).then(function(tplset) {
-            availableTwigTemplates = tplset.templates;
+            var jtplset = JSON.parse(tplset);
+            availableTwigTemplates = jtplset.templates;
             // console.log('availableTwigTemplates = ' + availableTwigTemplates);
             $.growl({
                 title: "TrelloExport",
@@ -936,7 +940,9 @@ function TrelloExportOptions() {
             }
 
             loadTemplateSetFromURL(tplsetURL).then(function(tplset) {
-                if (!tplset.templates) {
+                var jtplset = JSON.parse(tplset);
+
+                if (!jtplset.templates) {
                     console.error('UNABLE TO LOAD TEMPLATE SET');
                     console.log('tplset: ' + tplset);
                     $.growl.error({
@@ -946,9 +952,9 @@ function TrelloExportOptions() {
                     });
                     return;
                 }
-
+                // console.log('tplset loaded: ' + tplset);
                 localStorage.TrelloExportTwigTemplatesURL = tplsetURL;
-                availableTwigTemplates = tplset.templates;
+                availableTwigTemplates = jtplset.templates;
 
                 var availableTwigTemplatesOptions = [];
                 for (var t = 0; t < availableTwigTemplates.length; t++) {
@@ -965,6 +971,11 @@ function TrelloExportOptions() {
 
             }, function(err) {
                 console.error('ERROR: ' + err);
+                    $.growl.error({
+                    title: "TrelloExport",
+                    message: "Unable to load template set from URL " + tplsetURL,
+                    fixed: true
+                });
             });
         });
 
@@ -3506,28 +3517,34 @@ function isImage(name) {
     return (name.endsWith("jpg") || name.endsWith("jpeg") || name.endsWith("png"));
 }
 
-function loadTemplate(url) {
-    return $.ajax({
-        headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
-        url: url,
-        async: false,
-        method: 'GET',
-        xhrFields: {
-            withCredentials: true
-        },
-        done: function(sTwig) {
-            console.log('template loaded: ' + sTwig);
-            return sTwig;
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.error(jqXHR.statusText);
-            $.growl.error({
-                title: "TrelloExport",
-                message: jqXHR.statusText + ' ' + jqXHR.status + ': ' + jqXHR.responseText,
-                fixed: true
+function loadTemplate(sUrl) {
+    return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", sUrl, true);
+        xhr.onload = function () {
+            if (xhr.status == 200) {
+                // console.log('loadTemplate loaded: ' + xhr.response);
+                resolve(xhr.response);
+            }
+            else {
+                reject({
+                    status: xhr.status,
+                    statusText: xhr.statusText
+                });
+            }
+        };
+        xhr.onerror = function () {
+            if (xhr.status === 0) {
+                console.error(xhr.response)
+            }
+            reject({
+                status: xhr.status,
+                statusText: xhr.statusText
             });
-            return null;
-        }
+        };
+        xhr.crossDomain = true;
+        xhr.withCredentials = false;
+        xhr.send();
     });
 }
 

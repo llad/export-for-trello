@@ -19,6 +19,11 @@ If you cannot find a solution, or would like some new feature to be implemented,
 
 ## Release history
 
+### Version 1.9.73:
+- update jquery
+- fix OPML export of comments due date, issue #91
+- improvements for issue #29
+
 ### Version 1.9.72:
 - finally restored the capability to load templates from external URLs, issues #86 and #87
 

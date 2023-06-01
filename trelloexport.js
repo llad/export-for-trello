@@ -247,8 +247,12 @@
     - checklist items' due date, assignee and status added to checklists' mode excel export
 * Whatsnew for v. 1.9.72:
     - finally restored the capability to load templates from external URLs, issues #86 and #87
+* Whatsnew for v. 1.9.73:
+    - update jquery
+    - fix OPML export of comments due date, issue #91
+    - improvements for issue #29
 */
-var VERSION = '1.9.72';
+var VERSION = '1.9.73';
 
 // TWIG templates definition
 var availableTwigTemplates = [
@@ -271,7 +275,6 @@ function loadTemplateSetFromURL(sUrl) {
         xhr.onload = function () {
             if (xhr.status == 200) {
                 // console.log('template set loaded: ' + JSON.parse(xhr.response));
-                // return xhr.response;
                 resolve(xhr.response);
             }
             else {
@@ -408,7 +411,7 @@ var $,
     exportcards = [],
     nameListDone = "Done",
     filterListsNames = [],
-    pageSize = 300, // cfr https://trello.com/c/8MJOLSCs/10-limit-actions-for-cards-requests
+    pageSize = 25, // cfr https://trello.com/c/8MJOLSCs/10-limit-actions-for-cards-requests
     customFields = [];
     var allColumns = null;
 
@@ -1637,7 +1640,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
 
             var readCards = 0;
 
-            var apiURL = "https://trello.com/1/boards/" + idBoard + "/lists?fields=name,closed"; //"?lists=all&cards=all&card_fields=all&card_checklists=all&members=all&member_fields=all&membersInvited=all&checklists=all&organization=true&organization_fields=all&fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&card_attachments=true";
+            var apiURL = "https://trello.com/1/boards/" + idBoard + "/lists?fields=name,closed&filter=all"; //"?lists=all&cards=all&card_fields=all&card_checklists=all&members=all&member_fields=all&membersInvited=all&checklists=all&organization=true&organization_fields=all&fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&card_attachments=true";
             $.ajax({
                     headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
                     url: apiURL,
@@ -1718,6 +1721,7 @@ function loadData(exportFormat, bexportArchived, bExportComments, bExportCheckli
                                     headers: { 'x-trello-user-agent-extension': 'TrelloExport'},
                                     url: 'https://trello.com/1/lists/' + list_id + '/cards?limit=' + pageSize + '&filter=all&fields=all&checklists=all&members=true&member_fields=all&membersInvited=all&organization=true&organization_fields=all&actions=commentCard%2CcopyCommentCard%2CupdateCheckItemStateOnCard&attachments=true' + "&before=" + sBefore,
                                     async: false,
+                                    timeout: 60000,
                                 })
                                 .done(function(datacards) {
 
@@ -3677,8 +3681,9 @@ function createOPMLExport(jsonComputedCards, bExportCustomFields) {
             sXML += '<outline text="Comments">';
             for (i = 0; i < card.jsonComments.length; i++) {
                 var d = card.jsonComments[i].date;
-                if (d)
-                    sXML += '<outline text="' + escape4XML(card.jsonComments[i].text) + '" created="' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString() + '" createdBy="' + escape4XML(card.jsonComments[i].memberCreator.fullName) + '"></outline>';
+                if (d) {
+                    sXML += '<outline text="' + escape4XML(card.jsonComments[i].text) + '" created="' + d  + ( card.jsonComments[i].memberCreator !== null ? '" createdBy="' + escape4XML(card.jsonComments[i].memberCreator.fullName) : '' ) + '"></outline>';
+                }
             }
             sXML += '</outline>';
         }

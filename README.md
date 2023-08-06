@@ -12,8 +12,7 @@ Open a Trello Board, click Show Menu, More, Print and Export, TrelloExport.
 
 Please check [TrelloExport Wiki](https://github.com/trapias/trelloExport/wiki) for help first. If you have some problems, check the [troubleshooting guide](https://github.com/trapias/trelloExport/wiki/Troubleshooting).
 
-If you cannot find a solution, or would like some new feature to be implemented, please open issues at [Github](https://github.com/trapias/trelloExport/issues) or ask for help in the dedicated [Trello board]
-(https://trello.com/b/MBnwUMwM/trelloexport).
+If you cannot find a solution, or would like some new feature to be implemented, please open issues at [Github](https://github.com/trapias/trelloExport/issues).
 
 <a href="https://www.buymeacoffee.com/trapias" target="_blank"><img src="https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
 

@@ -4,6 +4,8 @@ TrelloExport is a Chrome extension to export data from Trello to Excel, Markdown
 
 You can find it on [Chrome Web Store](https://chrome.google.com/webstore/detail/trelloexport/kmmnaeamjfdnbhljpedgfchjbkbomahp).
 
+TrelloExport now has a dedicated website at [https://trelloexport.trapias.it/](https://trelloexport.trapias.it/)
+
 ## How to use
 
 Open a Trello Board, click Show Menu, More, Print and Export, TrelloExport.
